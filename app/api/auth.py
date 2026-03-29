@@ -5,8 +5,10 @@ from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from ..database import get_db
-from ..utils import send_email_html
-from .. import models, security, schemas
+from ..utils.email import send_email_html
+from .. import models
+from .. import security
+from .. import schemas
 from ..models import User
 from typing import Optional
 
