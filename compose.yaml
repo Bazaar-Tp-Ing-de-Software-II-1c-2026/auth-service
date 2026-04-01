@@ -1,28 +1,26 @@
 services:
-  auth-service:
-    build: .
-    ports:
-      - "8081:8081"
-    environment:
-      - DATABASE_URL=postgresql://user_auth:pass_auth@db-auth:5432/auth_db
-      - SECRET_KEY=tu_clave_secreta_para_jwt
-    depends_on:
-      db-auth:
-        condition: service_healthy
-
   db-auth:
     image: postgres:15-alpine
+    container_name: auth-db
     environment:
       - POSTGRES_USER=user_auth
       - POSTGRES_PASSWORD=pass_auth
       - POSTGRES_DB=auth_db
+    ports:
+      - "5433:5432" # Mapeamos a 5433 en tu Windows para que no choque con otro Postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user_auth -d auth_db"]
       interval: 5s
       timeout: 5s
       retries: 5
-    volumes:
-      - postgres_auth_data:/var/lib/postgresql/data
 
-volumes:
-  postgres_auth_data:
+  auth-service:
+    build: .
+    container_name: auth-api
+    ports:
+      - "8081:8081"
+    environment:
+      - DATABASE_URL=postgresql://user_auth:pass_auth@db-auth:5432/auth_db
+    depends_on:
+      db-auth:
+        condition: service_healthy
