@@ -88,12 +88,14 @@ class TestUserOut:
             "last_name": "User",
             "role": "user",
             "blocked": False,
+            "is_verified": True,
             "username": "testuser"
         }
         user_out = UserOut(**data)
         assert user_out.id == 1
         assert user_out.email == "test@example.com"
         assert user_out.role == "user"
+        assert user_out.is_verified is True
 
     def test_user_out_default_blocked(self):
         data = {
@@ -106,6 +108,7 @@ class TestUserOut:
         }
         user_out = UserOut(**data)
         assert user_out.blocked is False
+        assert user_out.is_verified is False
 
 
 class TestToken:

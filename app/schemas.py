@@ -32,12 +32,16 @@ class UserOut(BaseModel):
     last_name: str
     role: str
     blocked: bool = False
+    is_verified: bool = False
     username: str
 
     class Config:
         from_attributes = True
 
 class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResendVerificationEmailRequest(BaseModel):
     email: EmailStr
 
 class ResetPassword(BaseModel):

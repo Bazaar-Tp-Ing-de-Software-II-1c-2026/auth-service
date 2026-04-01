@@ -23,6 +23,7 @@ class TestUserModel:
         assert user.last_name == "User"
         assert user.role == "user"
         assert user.blocked is False
+        assert user.is_verified is False
 
     def test_user_unique_email(self, db):
         user1 = User(

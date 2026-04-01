@@ -11,4 +11,5 @@ class User(Base):
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
     role = Column(String, default="user", server_default="user", nullable=False, index=True)
-    blocked = Column(Boolean, default=False, nullable=False)  
+    blocked = Column(Boolean, default=False, nullable=False)
+    is_verified = Column(Boolean, default=False, nullable=False)
