@@ -7,7 +7,7 @@ services:
       - POSTGRES_PASSWORD=pass_auth
       - POSTGRES_DB=auth_db
     ports:
-      - "5433:5432" # Mapeamos a 5433 en tu Windows para que no choque con otro Postgres
+      - "5433:5432" 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user_auth -d auth_db"]
       interval: 5s
@@ -21,6 +21,14 @@ services:
       - "8081:8081"
     environment:
       - DATABASE_URL=postgresql://user_auth:pass_auth@db-auth:5432/auth_db
+      - APP_PUBLIC_URL=http://localhost:8082
+      - SMTP_HOST=smtp.gmail.com
+      - SMTP_PORT=465
+      - SMTP_USER=0bazaarnoreply@gmail.com
+      - SMTP_PASS=wzqbynuhfrrmpubb
+      - SMTP_SSL=True
+      - SMTP_STARTTLS=False
+      - EMAIL_FROM=Bazaar Auth <0bazaarnoreply@gmail.com>
     depends_on:
       db-auth:
         condition: service_healthy
