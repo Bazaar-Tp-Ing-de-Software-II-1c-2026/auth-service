@@ -8,11 +8,14 @@ def _smtp_config():
     host = os.getenv("SMTP_HOST", "smtp.gmail.com")
     port = int(os.getenv("SMTP_PORT", "465"))
     user = os.getenv("SMTP_USER")
-    password = os.getenv("SMTP_PASSWORD")
+    password = os.getenv("SMTP_PASS") or os.getenv("SMTP_PASSWORD")
     use_starttls = os.getenv("SMTP_STARTTLS", "False").lower() == "true"
     use_ssl = os.getenv("SMTP_SSL", "True").lower() == "true"
-    sender = os.getenv("SMTP_SENDER", user)
+    sender = os.getenv("EMAIL_FROM") or os.getenv("SMTP_SENDER", user)
     timeout = int(os.getenv("SMTP_TIMEOUT", "10"))
+    
+    if not host or not user or not password:
+        raise RuntimeError("SMTP no configurado: faltan SMTP_HOST/SMTP_USER/SMTP_PASS")
     
     return host, port, user, password, use_starttls, use_ssl, sender, timeout
 
