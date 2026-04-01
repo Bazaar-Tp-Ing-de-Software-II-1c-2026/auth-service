@@ -66,7 +66,8 @@ def test_user(db):
         first_name="Test",
         last_name="User",
         role="user",
-        blocked=False
+        blocked=False,
+        is_verified=True,
     )
     db.add(user)
     db.commit()
@@ -85,7 +86,8 @@ def test_admin(db):
         first_name="Admin",
         last_name="User",
         role="admin",
-        blocked=False
+        blocked=False,
+        is_verified=True,
     )
     db.add(admin)
     db.commit()

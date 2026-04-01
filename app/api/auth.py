@@ -16,6 +16,29 @@ from typing import Optional
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
+def _send_verification_email(user: models.User) -> None:
+    token_data = {"sub": str(user.id), "scope": "email-verification"}
+    verification_token = security.create_access_token(
+        token_data, expires_delta=timedelta(hours=24)
+    )
+    app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
+    link = f"{app_url}/verify-email?token={verification_token}"
+
+    subject = "Verify your account - Bazaar"
+    html_content = f"""
+    <html>
+        <body>
+            <p>Hello {user.first_name},</p>
+            <p>Thanks for signing up. Please verify your email to activate your account:</p>
+            <a href="{link}" style="background:#0ea5e9;color:#fff;padding:10px;border-radius:5px;">Verify account</a>
+            <p>This link expires in 24 hours.</p>
+            <p>Best regards,<br/>The Bazaar Team</p>
+        </body>
+    </html>
+    """
+    send_email_html(user.email, subject, html_content)
+
+
 def get_current_user(
     authorization: str | None = Header(default=None), db: Session = Depends(get_db)
 ) -> models.User:
@@ -77,8 +100,16 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
         role="user",
     )
     db.add(user)
-    db.flush()
-    db.commit()
+
+    try:
+        db.flush()
+        _send_verification_email(user)
+
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
     db.refresh(user)
     return user
 
@@ -108,6 +139,12 @@ def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
             detail="Your account has been blocked.",
         )
 
+    if not user.is_verified:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Please verify your email before logging in.",
+        )
+
     if not security.verify_password(payload.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -118,6 +155,43 @@ def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
     token = security.create_access_token(token_data)
 
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.get("/verify-email", response_model=dict)
+def verify_email(token: str, db: Session = Depends(get_db)):
+    data = security.decode_token(token)
+    if not data or data.get("scope") != "email-verification":
+        raise HTTPException(status_code=401, detail="Invalid or expired verification token")
+
+    user_id = data.get("sub")
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid verification token")
+
+    user = db.query(models.User).get(int(user_id))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.is_verified:
+        return {"message": "Email is already verified"}
+
+    user.is_verified = True
+    db.add(user)
+    db.commit()
+    return {"message": "Email verified successfully. You can now log in."}
+
+
+@router.post("/resend-verification-email", response_model=dict)
+def resend_verification_email(
+    payload: schemas.ResendVerificationEmailRequest,
+    db: Session = Depends(get_db),
+):
+    user = db.query(models.User).filter(models.User.email == payload.email).first()
+    if user and not user.is_verified:
+        _send_verification_email(user)
+
+    return {
+        "message": "If an account with that email exists and is not verified, a new verification email has been sent."
+    }
 
 
 @router.get("/me", response_model=schemas.UserOut)
