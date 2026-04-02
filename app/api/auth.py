@@ -201,7 +201,7 @@ def me(user: models.User = Depends(get_current_user)):
 
 def _send_reset_password_email(user: models.User, reset_token: str) -> None:
     app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
-    link = f"{app_url}/reset-password?token={reset_token}"
+    link = f"{app_url}/verify-reset?token={reset_token}"
 
     subject = "Reset your password - Bazaar"
     html_content = f"""
