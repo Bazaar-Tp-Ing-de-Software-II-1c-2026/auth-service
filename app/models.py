@@ -1,4 +1,5 @@
-from sqlalchemy import Boolean, Column, Integer, String
+from sqlalchemy import Boolean, Column, Integer, String, DateTime
+from datetime import datetime
 from .database import Base
 
 # Table for users
@@ -13,3 +14,5 @@ class User(Base):
     role = Column(String, default="user", server_default="user", nullable=False, index=True)
     blocked = Column(Boolean, default=False, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
+    reset_token = Column(String, nullable=True, index=True)
+    reset_token_expires = Column(DateTime, nullable=True)

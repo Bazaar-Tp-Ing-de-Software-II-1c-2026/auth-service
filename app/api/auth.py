@@ -1,5 +1,5 @@
 from __future__ import annotations
-from datetime import timedelta
+from datetime import timedelta, datetime
 import os
 from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
@@ -197,6 +197,87 @@ def resend_verification_email(
 @router.get("/me", response_model=schemas.UserOut)
 def me(user: models.User = Depends(get_current_user)):
     return user
+
+
+def _send_reset_password_email(user: models.User, reset_token: str) -> None:
+    app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
+    link = f"{app_url}/reset-password?token={reset_token}"
+
+    subject = "Reset your password - Bazaar"
+    html_content = f"""
+    <html>
+        <body>
+            <p>Hello {user.first_name},</p>
+            <p>We received a request to reset your password. Click the button below to create a new password:</p>
+            <a href="{link}" style="background:#0ea5e9;color:#fff;padding:10px;border-radius:5px;">Reset Password</a>
+            <p>This link expires in 1 hour.</p>
+            <p>If you didn't request this, you can ignore this email.</p>
+            <p>Best regards,<br/>The Bazaar Team</p>
+        </body>
+    </html>
+    """
+    send_email_html(user.email, subject, html_content)
+
+
+@router.post("/request-reset-password", response_model=dict)
+def request_reset_password(
+    payload: schemas.ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    user = db.query(models.User).filter(models.User.email == payload.email).first()
+    
+    if user:
+        # Generar token con expiración de 1 hora
+        token_data = {"sub": str(user.id), "scope": "password-reset"}
+        reset_token = security.create_access_token(
+            token_data, expires_delta=timedelta(hours=1)
+        )
+        
+        # Guardar token en BD con expiración
+        user.reset_token = reset_token
+        user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+        db.add(user)
+        db.commit()
+        
+        # Enviar email
+        _send_reset_password_email(user, reset_token)
+
+    # Retornar mensaje genérico por seguridad (no revelar si el email existe)
+    return {
+        "message": "If an account with that email exists, a password reset email has been sent."
+    }
+
+
+@router.post("/reset-password", response_model=dict)
+def reset_password(
+    payload: schemas.ResetPassword,
+    db: Session = Depends(get_db),
+):
+    # Validar token
+    data = security.decode_token(payload.token)
+    if not data or data.get("scope") != "password-reset":
+        raise HTTPException(status_code=401, detail="Invalid or expired reset token")
+
+    user_id = data.get("sub")
+    if user_id is None:
+        raise HTTPException(status_code=401, detail="Invalid reset token")
+
+    user = db.query(models.User).get(int(user_id))
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Verificar que el token guardado en BD coincida
+    if user.reset_token != payload.token or not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+        raise HTTPException(status_code=401, detail="Reset token has expired")
+
+    # Actualizar contraseña y limpiar token
+    user.hashed_password = security.hash_password(payload.new_password)
+    user.reset_token = None
+    user.reset_token_expires = None
+    db.add(user)
+    db.commit()
+
+    return {"message": "Password reset successfully. You can now log in with your new password."}
 
 
 @router.put("/me", response_model=schemas.UserOut)
