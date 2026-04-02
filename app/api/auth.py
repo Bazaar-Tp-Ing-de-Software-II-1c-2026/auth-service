@@ -84,6 +84,7 @@ def get_optional_user(
 
 @router.post("/register", response_model=schemas.UserOut)
 def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
+    
     if db.query(models.User).filter(models.User.email == payload.email).first():
         raise HTTPException(
             status_code=400, detail="El correo electrónico ya está registrado."
