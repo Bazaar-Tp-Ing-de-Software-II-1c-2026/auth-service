@@ -11,6 +11,8 @@ from .. import security
 from .. import schemas
 from ..models import User
 from typing import Optional
+from google.oauth2 import id_token
+from google.auth.transport import requests
 
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -150,7 +152,120 @@ def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
     return {"access_token": token, "token_type": "bearer"}
 
 
-@router.get("/verify-email", response_model=dict)
+@router.post("/google-login", response_model=schemas.Token)
+def google_login(payload: schemas.GoogleLoginRequest, db: Session = Depends(get_db)):
+    """
+    Google login endpoint.
+    Verifies the Google ID token and creates/retrieves the user.
+    """
+    try:
+        # Verificar el ID token con Google
+        google_client_id = os.getenv("GOOGLE_CLIENT_ID_WEB")
+        if not google_client_id:
+            raise HTTPException(
+                status_code=500,
+                detail="Google Client ID not configured"
+            )
+        
+        # Verificar el token con Google
+        idinfo = id_token.verify_oauth2_token(
+            payload.id_token,
+            requests.Request(),
+            google_client_id
+        )
+        
+        # Extraer información del usuario del token
+        email = idinfo.get("email")
+        first_name = idinfo.get("given_name", "")
+        last_name = idinfo.get("family_name", "")
+        
+        if not email:
+            raise HTTPException(
+                status_code=400,
+                detail="Email not found in Google token"
+            )
+        
+        # Buscar usuario existente
+        user = db.query(models.User).filter(models.User.email == email).first()
+        
+        if user:
+            # Usuario existente - actualizar información si falta
+            if not user.first_name and first_name:
+                user.first_name = first_name
+            if not user.last_name and last_name:
+                user.last_name = last_name
+            
+            if user.blocked:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Your account has been blocked."
+                )
+            
+            # Marcar como verificado si no lo estaba (google es confiable)
+            if not user.is_verified:
+                user.is_verified = True
+                try:
+                    send_welcome_email(
+                        to_email=user.email,
+                        username=user.first_name or user.username
+                    )
+                except Exception as e:
+                    print(f"[MAIL] Error sending welcome email: {str(e)}")
+        else:
+            # Crear nuevo usuario
+            # Generar username a partir del email
+            username_base = email.split("@")[0]
+            username = username_base
+            counter = 1
+            
+            # Asegurar que el username sea único
+            while db.query(models.User).filter(models.User.username == username).first():
+                username = f"{username_base}{counter}"
+                counter += 1
+            
+            user = models.User(
+                email=email,
+                username=username,
+                hashed_password=security.hash_password(os.urandom(32).hex()),  # Contraseña aleatoria
+                first_name=first_name,
+                last_name=last_name,
+                role="user",
+                is_verified=True,  # Google verified
+            )
+            db.add(user)
+            db.flush()
+            
+            # Enviar email de bienvenida
+            try:
+                send_welcome_email(
+                    to_email=user.email,
+                    username=user.first_name or user.username
+                )
+            except Exception as e:
+                print(f"[MAIL] Error sending welcome email: {str(e)}")
+        
+        db.commit()
+        db.refresh(user)
+        
+        # Generar JWT token
+        token_data = {"sub": str(user.id), "email": user.email, "username": user.username}
+        token = security.create_access_token(token_data)
+        
+        return {"access_token": token, "token_type": "bearer"}
+        
+    except ValueError as e:
+        # Token inválido o expirado
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired Google token"
+        )
+    except Exception as e:
+        print(f"[ERROR] Google login error: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Google login failed: {str(e)}"
+        )
+
 def verify_email(token: str, db: Session = Depends(get_db)):
     data = security.decode_token(token)
     if not data or data.get("scope") != "email-verification":

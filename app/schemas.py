@@ -105,3 +105,7 @@ class ResetPassword(BaseModel):
     @classmethod
     def password_validator(cls, v: str) -> str:
         return validate_password_strength(v)
+
+
+class GoogleLoginRequest(BaseModel):
+    id_token: str
