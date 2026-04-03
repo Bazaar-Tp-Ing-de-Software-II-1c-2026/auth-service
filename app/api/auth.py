@@ -156,23 +156,53 @@ def login(payload: schemas.UserLogin, db: Session = Depends(get_db)):
 def google_login(payload: schemas.GoogleLoginRequest, db: Session = Depends(get_db)):
     """
     Google login endpoint.
-    Verifies the Google ID token and creates/retrieves the user.
+    Verifies the Google ID token from Web, Android, or iOS and creates/retrieves the user.
     """
     try:
-        # Verificar el ID token con Google
-        google_client_id = os.getenv("GOOGLE_CLIENT_ID_WEB")
-        if not google_client_id:
+        # Obtener Client IDs
+        google_client_id_web = os.getenv("GOOGLE_CLIENT_ID_WEB")
+        google_client_id_android = os.getenv("GOOGLE_CLIENT_ID_ANDROID")
+        
+        # Al menos uno debe estar configurado
+        if not google_client_id_web and not google_client_id_android:
             raise HTTPException(
                 status_code=500,
-                detail="Google Client ID not configured"
+                detail="Google Client IDs not configured"
             )
         
-        # Verificar el token con Google
-        idinfo = id_token.verify_oauth2_token(
-            payload.id_token,
-            requests.Request(),
-            google_client_id
-        )
+        # Intentar verificar el token con los Client IDs disponibles
+        idinfo = None
+        verification_error = None
+        
+        # Intentar primero con Web Client ID
+        if google_client_id_web:
+            try:
+                idinfo = id_token.verify_oauth2_token(
+                    payload.id_token,
+                    requests.Request(),
+                    google_client_id_web
+                )
+            except Exception as e:
+                verification_error = e
+        
+        # Si falló con Web, intentar con Android Client ID
+        if not idinfo and google_client_id_android:
+            try:
+                idinfo = id_token.verify_oauth2_token(
+                    payload.id_token,
+                    requests.Request(),
+                    google_client_id_android
+                )
+            except Exception as e:
+                verification_error = e
+        
+        # Si no se pudo verificar con ninguno, retornar error
+        if not idinfo:
+            print(f"[ERROR] Token verification failed: {verification_error}")
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid or expired Google token"
+            )
         
         # Extraer información del usuario del token
         email = idinfo.get("email")
@@ -259,6 +289,8 @@ def google_login(payload: schemas.GoogleLoginRequest, db: Session = Depends(get_
             status_code=401,
             detail="Invalid or expired Google token"
         )
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[ERROR] Google login error: {str(e)}")
         raise HTTPException(
