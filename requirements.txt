@@ -12,3 +12,4 @@ resend==2.27.0
 httpx==0.25.2
 pytest-asyncio==0.23.2
 email-validator
+google-auth==2.28.1
