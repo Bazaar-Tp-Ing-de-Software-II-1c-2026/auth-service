@@ -24,7 +24,12 @@ def _send_verification_email(user: models.User) -> None:
         token_data, expires_delta=timedelta(hours=24)
     )
     app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
-    link = f"{app_url}/verify-email?token={verification_token}"
+    
+    # Manejar esquemas personalizados (ej: bazaarfrontend://)
+    if app_url.endswith("://"):
+        link = f"{app_url}verify-email?token={verification_token}"
+    else:
+        link = f"{app_url}/verify-email?token={verification_token}"
 
     send_verification_email(
         to_email=user.email,
@@ -352,7 +357,12 @@ def me(user: models.User = Depends(get_current_user)):
 
 def _send_reset_password_email(user: models.User, reset_token: str) -> None:
     app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
-    link = f"{app_url}/verify-reset?token={reset_token}"
+    
+    # Manejar esquemas personalizados (ej: bazaarfrontend://)
+    if app_url.endswith("://"):
+        link = f"{app_url}verify-reset?token={reset_token}"
+    else:
+        link = f"{app_url}/verify-reset?token={reset_token}"
 
     send_reset_password_email(
         to_email=user.email,
@@ -383,7 +393,12 @@ def request_reset_password(
         
         # Enviar email usando template personalizado
         app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
-        link = f"{app_url}/verify-reset?token={reset_token}"
+        
+        # Manejar esquemas personalizados (ej: bazaarfrontend://)
+        if app_url.endswith("://"):
+            link = f"{app_url}verify-reset?token={reset_token}"
+        else:
+            link = f"{app_url}/verify-reset?token={reset_token}"
         
         send_reset_password_email(
             to_email=user.email,
@@ -454,7 +469,12 @@ def request_password_reset(
         reset_token = security.create_access_token(token_data, expires_delta=timedelta(hours=1))
 
         app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
-        link = f"{app_url}/reset-password?token={reset_token}"
+        
+        # Manejar esquemas personalizados (ej: bazaarfrontend://)
+        if app_url.endswith("://"):
+            link = f"{app_url}reset-password?token={reset_token}"
+        else:
+            link = f"{app_url}/reset-password?token={reset_token}"
 
         # Enviar email usando template personalizado
         send_reset_password_email(
