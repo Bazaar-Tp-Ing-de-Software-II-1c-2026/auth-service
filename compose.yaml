@@ -18,10 +18,10 @@ services:
     build: .
     container_name: auth-api
     ports:
-      - "8081:8081"
+      - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://user_auth:pass_auth@db-auth:5432/auth_db
-      - APP_PUBLIC_URL=http://localhost:8082
+      - APP_PUBLIC_URL=http://localhost:8081
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=465
       - SMTP_USER=0bazaarnoreply@gmail.com
