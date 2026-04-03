@@ -1,6 +1,11 @@
 from __future__ import annotations
 import os
 from fastapi import HTTPException, status
+from .email_templates import (
+    get_verification_email_html,
+    get_reset_password_email_html,
+    get_welcome_email_html
+)
 
 try:
     import resend
@@ -52,3 +57,37 @@ def send_email_html(
             status_code=status.HTTP_502_BAD_GATEWAY,
             detail=f"Error enviando email: {str(e)}"
         )
+
+
+def send_verification_email(
+    to_email: str, username: str, verification_link: str
+):
+    """Enviar email de verificación con template personalizado"""
+    html_content = get_verification_email_html(username, verification_link)
+    send_email_html(
+        to_email=to_email,
+        subject="Verificar tu cuenta - Bazaar",
+        html_body=html_content
+    )
+
+
+def send_reset_password_email(
+    to_email: str, username: str, reset_link: str
+):
+    """Enviar email de reseteo de contraseña con template personalizado"""
+    html_content = get_reset_password_email_html(username, reset_link)
+    send_email_html(
+        to_email=to_email,
+        subject="Restablecer tu contraseña - Bazaar",
+        html_body=html_content
+    )
+
+
+def send_welcome_email(to_email: str, username: str):
+    """Enviar email de bienvenida (opcional)"""
+    html_content = get_welcome_email_html(username)
+    send_email_html(
+        to_email=to_email,
+        subject="¡Bienvenido a Bazaar!",
+        html_body=html_content
+    )

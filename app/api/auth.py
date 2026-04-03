@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from ..database import get_db
-from ..utils.email import send_email_html
+from ..utils.email import send_email_html, send_verification_email, send_reset_password_email, send_welcome_email
 from .. import models
 from .. import security
 from .. import schemas
@@ -24,19 +24,11 @@ def _send_verification_email(user: models.User) -> None:
     app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
     link = f"{app_url}/verify-email?token={verification_token}"
 
-    subject = "Verify your account - Bazaar"
-    html_content = f"""
-    <html>
-        <body>
-            <p>Hello {user.first_name},</p>
-            <p>Thanks for signing up. Please verify your email to activate your account:</p>
-            <a href="{link}" style="background:#0ea5e9;color:#fff;padding:10px;border-radius:5px;">Verify account</a>
-            <p>This link expires in 24 hours.</p>
-            <p>Best regards,<br/>The Bazaar Team</p>
-        </body>
-    </html>
-    """
-    send_email_html(user.email, subject, html_content)
+    send_verification_email(
+        to_email=user.email,
+        username=user.first_name or user.username,
+        verification_link=link
+    )
 
 
 def get_current_user(
@@ -178,6 +170,17 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     user.is_verified = True
     db.add(user)
     db.commit()
+    
+    # Enviar email de bienvenida
+    try:
+        send_welcome_email(
+            to_email=user.email,
+            username=user.first_name or user.username
+        )
+    except Exception as e:
+        print(f"[MAIL] Error sending welcome email: {str(e)}")
+        # No lanzar excepción si el email de bienvenida falla
+    
     return {"message": "Email verified successfully. You can now log in."}
 
 
@@ -204,20 +207,11 @@ def _send_reset_password_email(user: models.User, reset_token: str) -> None:
     app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
     link = f"{app_url}/verify-reset?token={reset_token}"
 
-    subject = "Reset your password - Bazaar"
-    html_content = f"""
-    <html>
-        <body>
-            <p>Hello {user.first_name},</p>
-            <p>We received a request to reset your password. Click the button below to create a new password:</p>
-            <a href="{link}" style="background:#0ea5e9;color:#fff;padding:10px;border-radius:5px;">Reset Password</a>
-            <p>This link expires in 1 hour.</p>
-            <p>If you didn't request this, you can ignore this email.</p>
-            <p>Best regards,<br/>The Bazaar Team</p>
-        </body>
-    </html>
-    """
-    send_email_html(user.email, subject, html_content)
+    send_reset_password_email(
+        to_email=user.email,
+        username=user.first_name or user.username,
+        reset_link=link
+    )
 
 
 @router.post("/request-reset-password", response_model=dict)
@@ -240,8 +234,15 @@ def request_reset_password(
         db.add(user)
         db.commit()
         
-        # Enviar email
-        _send_reset_password_email(user, reset_token)
+        # Enviar email usando template personalizado
+        app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
+        link = f"{app_url}/verify-reset?token={reset_token}"
+        
+        send_reset_password_email(
+            to_email=user.email,
+            username=user.first_name or user.username,
+            reset_link=link
+        )
 
     # Retornar mensaje genérico por seguridad (no revelar si el email existe)
     return {
@@ -308,22 +309,12 @@ def request_password_reset(
         app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
         link = f"{app_url}/reset-password?token={reset_token}"
 
-        #cuerpo del mail
-        subject = "Password Reset Request - Bazaar"
-        html_content = f"""
-        <html>
-            <body>
-                <p>Hello {user.first_name},</p>
-                <p>We received a request to reset your password. Click the link below to create a new password:</p>
-                <a href="{link}" style="background:#0ea5e9;color:#fff;padding:10px;border-radius:5px;">Reset Password</a>
-                <p>This link will expire in 1 hour.</p>
-                <p>If you didn't request this change, you can ignore this email.</p>
-                <p>Best regards,<br/>The Bazaar Team</p>
-            </body>
-        </html>
-        """
-
-        send_email_html(user.email, subject, html_content)
+        # Enviar email usando template personalizado
+        send_reset_password_email(
+            to_email=user.email,
+            username=user.first_name or user.username,
+            reset_link=link
+        )
     return {"message": "If an account with that email/username exists, you will receive an email with instructions to reset your password."}
 
 
