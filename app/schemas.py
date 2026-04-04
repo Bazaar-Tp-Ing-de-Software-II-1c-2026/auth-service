@@ -119,3 +119,19 @@ class VerifyCodeRequest(BaseModel):
     @classmethod
     def email_to_lower(cls, v: EmailStr) -> str:
         return normalize_email(v)
+
+
+class ResetPasswordWithCodeRequest(BaseModel):
+    email: EmailStr
+    code: str
+    new_password: str
+
+    @field_validator("email")
+    @classmethod
+    def email_to_lower(cls, v: EmailStr) -> str:
+        return normalize_email(v)
+
+    @field_validator("new_password")
+    @classmethod
+    def password_validator(cls, v: str) -> str:
+        return validate_password_strength(v)

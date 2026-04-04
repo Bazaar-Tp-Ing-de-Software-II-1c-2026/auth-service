@@ -436,37 +436,71 @@ def request_reset_password(
     user = db.query(models.User).filter(models.User.email == payload.email).first()
     
     if user:
-        # Generar token con expiración de 1 hora
-        token_data = {"sub": str(user.id), "scope": "password-reset"}
-        reset_token = security.create_access_token(
-            token_data, expires_delta=timedelta(hours=1)
-        )
+        # Generar código aleatorio de 8 caracteres
+        reset_code = generate_verification_code(length=8)
         
-        # Guardar token en BD con expiración
-        user.reset_token = reset_token
-        user.reset_token_expires = datetime.utcnow() + timedelta(hours=1)
+        # Guardar código en BD con expiración de 24 horas
+        user.verification_code = reset_code
+        user.verification_code_expires = datetime.utcnow() + timedelta(hours=24)
         db.add(user)
         db.commit()
         
-        # Enviar email usando template personalizado
-        app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
-        
-        # Manejar esquemas personalizados (ej: bazaarfrontend://)
-        if app_url.endswith("://"):
-            link = f"{app_url}verify-reset?token={reset_token}"
-        else:
-            link = f"{app_url}/verify-reset?token={reset_token}"
-        
+        # Enviar email con código
         send_reset_password_email(
             to_email=user.email,
             username=user.first_name or user.username,
-            reset_link=link
+            reset_code=reset_code
         )
 
     # Retornar mensaje genérico por seguridad (no revelar si el email existe)
     return {
         "message": "If an account with that email exists, a password reset email has been sent."
     }
+
+
+@router.post("/reset-password-with-code", response_model=dict)
+def reset_password_with_code(
+    payload: schemas.ResetPasswordWithCodeRequest,
+    db: Session = Depends(get_db),
+):
+    """Verifica el código de reset y actualiza la contraseña"""
+    user = db.query(models.User).filter(models.User.email == payload.email).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Usuario no encontrado"
+        )
+    
+    # Verificar si el código existe
+    if not user.verification_code:
+        raise HTTPException(
+            status_code=400,
+            detail="No hay código de reseteo enviado para esta cuenta"
+        )
+    
+    # Verificar si el código ha expirado
+    if user.verification_code_expires and user.verification_code_expires < datetime.utcnow():
+        raise HTTPException(
+            status_code=400,
+            detail="El código ha expirado. Solicita uno nuevo."
+        )
+    
+    # Verificar si el código es correcto (case-insensitive)
+    if user.verification_code.lower() != payload.code.lower():
+        raise HTTPException(
+            status_code=400,
+            detail="El código es incorrecto"
+        )
+    
+    # Actualizar contraseña y limpiar el código
+    user.hashed_password = security.hash_password(payload.new_password)
+    user.verification_code = None
+    user.verification_code_expires = None
+    db.add(user)
+    db.commit()
+
+    return {"message": "Contraseña actualizada exitosamente. Ya puedes iniciar sesión con tu nueva contraseña."}
 
 
 @router.post("/reset-password", response_model=dict)
@@ -516,50 +550,29 @@ def update_me(
 
 
 @router.post("/forgot-password", response_model=dict)
-def request_password_reset(
+def forgot_password(
     payload: schemas.ForgotPasswordRequest,
     db: Session = Depends(get_db),
 ):
+    """Alias para /request-reset-password por compatibilidad"""
     user = db.query(models.User).filter(models.User.email == payload.email).first()
     if user: 
-        token_data = {"sub": str(user.id), "scope": "password-reset"}
-        reset_token = security.create_access_token(token_data, expires_delta=timedelta(hours=1))
-
-        app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
+        # Generar código aleatorio de 8 caracteres
+        reset_code = generate_verification_code(length=8)
         
-        # Manejar esquemas personalizados (ej: bazaarfrontend://)
-        if app_url.endswith("://"):
-            link = f"{app_url}reset-password?token={reset_token}"
-        else:
-            link = f"{app_url}/reset-password?token={reset_token}"
-
-        # Enviar email usando template personalizado
+        # Guardar código en BD con expiración de 24 horas
+        user.verification_code = reset_code
+        user.verification_code_expires = datetime.utcnow() + timedelta(hours=24)
+        db.add(user)
+        db.commit()
+        
+        # Enviar email con código
         send_reset_password_email(
             to_email=user.email,
             username=user.first_name or user.username,
-            reset_link=link
+            reset_code=reset_code
         )
-    return {"message": "If an account with that email/username exists, you will receive an email with instructions to reset your password."}
-
-
-@router.post("/reset-password-confirmation")
-def reset_password_confirmation(
-    payload: schemas.ResetPassword, db: Session = Depends(get_db)
-):
-    data = security.decode_token(payload.token)
-    if not data or data.get("scope") != "password-reset":
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-
-    user_id = data.get("sub")
-    user = db.query(models.User).get(int(user_id))
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    user.hashed_password = security.hash_password(payload.new_password)
-    db.add(user)
-    db.commit()
-    return {"message": "Password has been reset successfully"}
-
+    return {"message": "If an account with that email exists, a password reset email has been sent."}
 
 def require_admin(current_user: User = Depends(get_current_user)) -> User:
     if current_user.role != "admin":
