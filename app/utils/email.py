@@ -72,10 +72,10 @@ def send_verification_email(
 
 
 def send_reset_password_email(
-    to_email: str, username: str, reset_link: str
+    to_email: str, username: str, reset_code: str
 ):
-    """Enviar email de reseteo de contraseña con template personalizado"""
-    html_content = get_reset_password_email_html(username, reset_link)
+    """Enviar email de reseteo de contraseña con código personalizado"""
+    html_content = get_reset_password_email_html(username, reset_code)
     send_email_html(
         to_email=to_email,
         subject="Restablecer tu contraseña - Bazaar",
