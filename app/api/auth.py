@@ -341,7 +341,19 @@ def resend_verification_email(
     db: Session = Depends(get_db),
 ):
     user = db.query(models.User).filter(models.User.email == payload.email).first()
+    
     if user and not user.is_verified:
+        # Verificar rate limit: máximo 1 solicitud por minuto
+        if user.last_verification_email_request:
+            time_since_last_request = datetime.utcnow() - user.last_verification_email_request
+            if time_since_last_request.total_seconds() < 60:  # Menos de 1 minuto
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Debes esperar antes de solicitar otro código. Intenta en {60 - int(time_since_last_request.total_seconds())} segundos."
+                )
+        
+        # Registrar el intento
+        user.last_verification_email_request = datetime.utcnow()
         _send_verification_email(user, db)
 
     return {
@@ -436,12 +448,22 @@ def request_reset_password(
     user = db.query(models.User).filter(models.User.email == payload.email).first()
     
     if user:
+        # Verificar rate limit: máximo 1 solicitud por minuto
+        if user.last_password_reset_request:
+            time_since_last_request = datetime.utcnow() - user.last_password_reset_request
+            if time_since_last_request.total_seconds() < 60:  # Menos de 1 minuto
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Debes esperar antes de solicitar otro reset. Intenta en {60 - int(time_since_last_request.total_seconds())} segundos."
+                )
+        
         # Generar código aleatorio de 8 caracteres
         reset_code = generate_verification_code(length=8)
         
         # Guardar código en BD con expiración de 24 horas
         user.verification_code = reset_code
         user.verification_code_expires = datetime.utcnow() + timedelta(hours=24)
+        user.last_password_reset_request = datetime.utcnow()  # Registrar el intento
         db.add(user)
         db.commit()
         
@@ -556,13 +578,23 @@ def forgot_password(
 ):
     """Alias para /request-reset-password por compatibilidad"""
     user = db.query(models.User).filter(models.User.email == payload.email).first()
-    if user: 
+    if user:
+        # Verificar rate limit: máximo 1 solicitud por minuto
+        if user.last_password_reset_request:
+            time_since_last_request = datetime.utcnow() - user.last_password_reset_request
+            if time_since_last_request.total_seconds() < 60:  # Menos de 1 minuto
+                raise HTTPException(
+                    status_code=429,
+                    detail=f"Debes esperar antes de solicitar otro reset. Intenta en {60 - int(time_since_last_request.total_seconds())} segundos."
+                )
+        
         # Generar código aleatorio de 8 caracteres
         reset_code = generate_verification_code(length=8)
         
         # Guardar código en BD con expiración de 24 horas
         user.verification_code = reset_code
         user.verification_code_expires = datetime.utcnow() + timedelta(hours=24)
+        user.last_password_reset_request = datetime.utcnow()  # Registrar el intento
         db.add(user)
         db.commit()
         

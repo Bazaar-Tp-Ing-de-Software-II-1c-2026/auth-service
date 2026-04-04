@@ -18,3 +18,5 @@ class User(Base):
     reset_token_expires = Column(DateTime, nullable=True)
     verification_code = Column(String, nullable=True, index=True)
     verification_code_expires = Column(DateTime, nullable=True)
+    last_password_reset_request = Column(DateTime, nullable=True)
+    last_verification_email_request = Column(DateTime, nullable=True)
