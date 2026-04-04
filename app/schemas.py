@@ -2,7 +2,6 @@ from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 import re
 
-
 def normalize_email(v: EmailStr) -> str:
     return v.strip().lower()
 
@@ -60,25 +59,6 @@ class UserLogin(BaseModel):
             return v.strip().lower()
         return v.strip()
 
-class UserUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-
-
-class UserOut(BaseModel):
-    id: int
-    email: EmailStr
-    first_name: str
-    last_name: str
-    role: str
-    blocked: bool = False
-    is_verified: bool = False
-    username: str
-
-    class Config:
-        from_attributes = True
-
-
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
@@ -135,3 +115,30 @@ class ResetPasswordWithCodeRequest(BaseModel):
     @classmethod
     def password_validator(cls, v: str) -> str:
         return validate_password_strength(v)
+
+class UserBase(BaseModel):
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    description: Optional[str] = None     
+    profile_picture_url: Optional[str] = None
+
+class UserOut(UserBase):
+    id: int
+    email: EmailStr
+    role: str
+    blocked: bool = False
+    is_verified: bool = False
+
+    class Config:
+        from_attributes = True
+
+class UserPublicOut(UserBase):
+    class Config:
+        from_attributes = True
+
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    description: Optional[str] = None
+    profile_picture_url: Optional[str] = None
