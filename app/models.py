@@ -20,3 +20,5 @@ class User(Base):
     verification_code_expires = Column(DateTime, nullable=True)
     last_password_reset_request = Column(DateTime, nullable=True)
     last_verification_email_request = Column(DateTime, nullable=True)
+    description = Column(Text, nullable=True) 
+    profile_picture_url = Column(String, nullable=True)
