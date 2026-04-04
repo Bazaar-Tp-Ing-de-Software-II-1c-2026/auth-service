@@ -1,147 +1,116 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from fastapi import HTTPException
-from app.utils.email import send_email_html, _smtp_config
+from app.utils.email import send_email_html
 import os
 
 
-class TestSmtpConfig:
-    def test_smtp_config_defaults(self):
-        with patch.dict(os.environ, {}, clear=True):
-            host, port, user, password, starttls, ssl, sender, timeout = _smtp_config()
-            assert host == "smtp.gmail.com"
-            assert port == 465
-            assert starttls is False
-            assert ssl is True
-            assert timeout == 10
-
-    def test_smtp_config_custom_values(self):
-        env_vars = {
-            "SMTP_HOST": "mail.example.com",
-            "SMTP_PORT": "587",
-            "SMTP_USER": "user@example.com",
-            "SMTP_PASSWORD": "password",
-            "SMTP_STARTTLS": "True",
-            "SMTP_SSL": "False",
-            "SMTP_SENDER": "sender@example.com",
-            "SMTP_TIMEOUT": "20"
-        }
-        with patch.dict(os.environ, env_vars):
-            host, port, user, password, starttls, ssl, sender, timeout = _smtp_config()
-            assert host == "mail.example.com"
-            assert port == 587
-            assert starttls is True
-            assert ssl is False
-            assert timeout == 20
-            assert sender == "sender@example.com"
-
-
 class TestSendEmailHtml:
-    @patch('app.utils.email.smtplib.SMTP_SSL')
-    def test_send_email_ssl_success(self, mock_smtp_ssl):
-        mock_server = MagicMock()
-        mock_smtp_ssl.return_value = mock_server
-
-        env_vars = {
-            "SMTP_HOST": "smtp.gmail.com",
-            "SMTP_PORT": "465",
-            "SMTP_USER": "test@gmail.com",
-            "SMTP_PASSWORD": "password",
-            "SMTP_SSL": "True"
-        }
-        
-        with patch.dict(os.environ, env_vars):
-            send_email_html(
-                to_email="recipient@example.com",
-                subject="Test Subject",
-                html_body="<h1>Test</h1>",
-                text_fallback="Test"
-            )
-        
-        mock_server.ehlo.assert_called()
-        mock_server.login.assert_called_once()
-        mock_server.send_message.assert_called_once()
-
-    @patch('app.utils.email.smtplib.SMTP')
-    def test_send_email_starttls_success(self, mock_smtp):
-        mock_server = MagicMock()
-        mock_smtp.return_value = mock_server
-
-        env_vars = {
-            "SMTP_HOST": "mail.example.com",
-            "SMTP_PORT": "587",
-            "SMTP_USER": "test@example.com",
-            "SMTP_PASSWORD": "password",
-            "SMTP_STARTTLS": "True",
-            "SMTP_SSL": "False"
-        }
-        
-        with patch.dict(os.environ, env_vars):
-            send_email_html(
-                to_email="recipient@example.com",
-                subject="Test Subject",
-                html_body="<h1>Test</h1>"
-            )
-        
-        mock_server.starttls.assert_called()
-        mock_server.login.assert_called_once()
-
-    @patch('app.utils.email.smtplib.SMTP_SSL')
-    def test_send_email_with_html(self, mock_smtp_ssl):
-        mock_server = MagicMock()
-        mock_smtp_ssl.return_value = mock_server
-
-        env_vars = {
-            "SMTP_HOST": "smtp.gmail.com",
-            "SMTP_USER": "test@gmail.com",
-            "SMTP_PASSWORD": "password"
-        }
-        
-        with patch.dict(os.environ, env_vars):
-            send_email_html(
-                to_email="test@example.com",
-                subject="HTML Test",
-                html_body="<p>Hello</p>"
-            )
-        
-        assert mock_server.send_message.called
-
-    @patch('app.utils.email.smtplib.SMTP_SSL')
-    def test_send_email_with_text_fallback(self, mock_smtp_ssl):
-        mock_server = MagicMock()
-        mock_smtp_ssl.return_value = mock_server
-
-        env_vars = {
-            "SMTP_HOST": "smtp.gmail.com",
-            "SMTP_USER": "test@gmail.com",
-            "SMTP_PASSWORD": "password"
-        }
-        
-        with patch.dict(os.environ, env_vars):
-            send_email_html(
-                to_email="test@example.com",
-                subject="Test",
-                html_body="<p>HTML</p>",
-                text_fallback="Plain text"
-            )
-        
-        assert mock_server.send_message.called
-
-    @patch('app.utils.email.smtplib.SMTP_SSL')
-    def test_send_email_timeout_error(self, mock_smtp):
-        import socket
-        mock_smtp.side_effect = socket.timeout("Connection timeout")
-
-        env_vars = {
-            "SMTP_HOST": "smtp.gmail.com",
-            "SMTP_USER": "test@gmail.com",
-            "SMTP_PASSWORD": "password"
-        }
-        
-        with patch.dict(os.environ, env_vars):
-            with pytest.raises(HTTPException):
+    def test_send_email_requires_api_key(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with pytest.raises(HTTPException) as exc_info:
                 send_email_html(
-                    to_email="test@example.com",
-                    subject="Test",
-                    html_body="<p>Test</p>"
+                    to_email="recipient@example.com",
+                    subject="Test Subject",
+                    html_body="<h1>Test</h1>",
                 )
+
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "RESEND_API_KEY no configurada"
+
+    def test_send_email_requires_resend_library(self):
+        env_vars = {"RESEND_API_KEY": "re_test_key"}
+        with patch.dict(os.environ, env_vars, clear=True):
+            with patch("app.utils.email.resend", None):
+                with pytest.raises(HTTPException) as exc_info:
+                    send_email_html(
+                        to_email="recipient@example.com",
+                        subject="Test Subject",
+                        html_body="<h1>Test</h1>",
+                    )
+
+        assert exc_info.value.status_code == 500
+        assert exc_info.value.detail == "Librería resend no instalada"
+
+    def test_send_email_success_uses_default_sender_and_default_text(self):
+        env_vars = {"RESEND_API_KEY": "re_test_key"}
+        with patch.dict(os.environ, env_vars, clear=True):
+            with patch("app.utils.email.resend") as mock_resend:
+                mock_resend.Emails.send.return_value = {"id": "email_123"}
+
+                send_email_html(
+                    to_email="recipient@example.com",
+                    subject="Test Subject",
+                    html_body="<h1>Test</h1>",
+                )
+
+        assert mock_resend.api_key == "re_test_key"
+        mock_resend.Emails.send.assert_called_once_with(
+            {
+                "from": "onboarding@resend.dev",
+                "to": "recipient@example.com",
+                "subject": "Test Subject",
+                "html": "<h1>Test</h1>",
+                "text": "Tu cliente de correo no soporta HTML.",
+            }
+        )
+
+    def test_send_email_success_uses_custom_sender_and_text_fallback(self):
+        env_vars = {
+            "RESEND_API_KEY": "re_test_key",
+            "EMAIL_FROM": "noreply@bazaar.test",
+        }
+        with patch.dict(os.environ, env_vars, clear=True):
+            with patch("app.utils.email.resend") as mock_resend:
+                mock_resend.Emails.send.return_value = {"id": "email_123"}
+
+                send_email_html(
+                    to_email="recipient@example.com",
+                    subject="Test Subject",
+                    html_body="<h1>Test</h1>",
+                    text_fallback="Texto alternativo",
+                )
+
+        mock_resend.Emails.send.assert_called_once_with(
+            {
+                "from": "noreply@bazaar.test",
+                "to": "recipient@example.com",
+                "subject": "Test Subject",
+                "html": "<h1>Test</h1>",
+                "text": "Texto alternativo",
+            }
+        )
+
+    def test_send_email_fails_when_provider_returns_no_id(self):
+        env_vars = {"RESEND_API_KEY": "re_test_key"}
+        with patch.dict(os.environ, env_vars, clear=True):
+            with patch("app.utils.email.resend") as mock_resend:
+                mock_resend.Emails.send.return_value = {
+                    "message": "provider error",
+                }
+
+                with pytest.raises(HTTPException) as exc_info:
+                    send_email_html(
+                        to_email="recipient@example.com",
+                        subject="Test Subject",
+                        html_body="<h1>Test</h1>",
+                    )
+
+        assert exc_info.value.status_code == 502
+        assert "Error enviando email:" in exc_info.value.detail
+
+    def test_send_email_fails_when_provider_raises_exception(self):
+        env_vars = {"RESEND_API_KEY": "re_test_key"}
+        with patch.dict(os.environ, env_vars, clear=True):
+            with patch("app.utils.email.resend") as mock_resend:
+                mock_resend.Emails.send.side_effect = RuntimeError("connection down")
+
+                with pytest.raises(HTTPException) as exc_info:
+                    send_email_html(
+                        to_email="recipient@example.com",
+                        subject="Test Subject",
+                        html_body="<h1>Test</h1>",
+                    )
+
+        assert exc_info.value.status_code == 502
+        assert "connection down" in exc_info.value.detail
