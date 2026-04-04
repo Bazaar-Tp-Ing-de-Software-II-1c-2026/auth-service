@@ -33,8 +33,8 @@ class TestUserCreate:
 
     def test_empty_string_password(self, valid_user_data):
         valid_user_data["password"] = ""
-        user = UserCreate(**valid_user_data)
-        assert user.password == ""
+        with pytest.raises(ValidationError):
+            UserCreate(**valid_user_data)
 
 
 class TestUserLogin:

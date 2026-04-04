@@ -18,9 +18,10 @@ engine = create_engine(
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def create_test_app():
-    from app.api import auth
+    from app.api import auth, user
     app = FastAPI(title="Bazaar Auth Service")
     app.include_router(auth.router)
+    app.include_router(user.router)
     
     @app.get("/")
     def home():
