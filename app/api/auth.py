@@ -53,7 +53,7 @@ def get_current_user(
     if user_id is None:
         raise HTTPException(status_code=401, detail="Token inválido (no sub)")
 
-    user = db.query(models.User).get(int(user_id))
+    user = db.get(models.User, int(user_id))
     if not user:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return user
@@ -74,7 +74,7 @@ def get_optional_user(
         user_id = data.get("sub")
         if user_id is None:
             return None
-        user = db.query(models.User).get(int(user_id))
+        user = db.get(models.User, int(user_id))
         return user
     except Exception:
         return None
@@ -302,6 +302,7 @@ def google_login(payload: schemas.GoogleLoginRequest, db: Session = Depends(get_
             detail=f"Google login failed: {str(e)}"
         )
 
+@router.get("/verify-email", response_model=dict)
 def verify_email(token: str, db: Session = Depends(get_db)):
     data = security.decode_token(token)
     if not data or data.get("scope") != "email-verification":
@@ -311,7 +312,7 @@ def verify_email(token: str, db: Session = Depends(get_db)):
     if user_id is None:
         raise HTTPException(status_code=401, detail="Invalid verification token")
 
-    user = db.query(models.User).get(int(user_id))
+    user = db.get(models.User, int(user_id))
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -417,11 +418,6 @@ def verify_code(
         # No lanzar excepción si el email de bienvenida falla
     
     return {"message": "Correo verificado exitosamente. Ya puedes iniciar sesión."}
-
-
-@router.get("/me", response_model=schemas.UserOut)
-def me(user: models.User = Depends(get_current_user)):
-    return user
 
 
 def _send_reset_password_email(user: models.User, reset_token: str) -> None:
@@ -539,7 +535,7 @@ def reset_password(
     if user_id is None:
         raise HTTPException(status_code=401, detail="Invalid reset token")
 
-    user = db.query(models.User).get(int(user_id))
+    user = db.get(models.User, int(user_id))
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -555,21 +551,6 @@ def reset_password(
     db.commit()
 
     return {"message": "Password reset successfully. You can now log in with your new password."}
-
-
-@router.put("/me", response_model=schemas.UserOut)
-def update_me(
-    payload: schemas.UserUpdate,
-    user: models.User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    user.first_name = payload.first_name
-    user.last_name = payload.last_name
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
-
 
 @router.post("/forgot-password", response_model=dict)
 def forgot_password(
