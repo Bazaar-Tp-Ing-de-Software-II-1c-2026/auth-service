@@ -6,8 +6,8 @@ BAZAAR_PRIMARY_COLOR = '#E6A500'
 BAZAAR_LOGO_URL = 'https://bazaar-app-bucket.s3.amazonaws.com/logo.png'  
 
 
-def get_verification_email_html(username: str, verification_link: str) -> str:
-    """Template para verificación de email"""
+def get_verification_email_html(username: str, verification_code: str) -> str:
+    """Template para verificación de email con código"""
     return f"""
 <!DOCTYPE html>
 <html>
@@ -59,20 +59,28 @@ def get_verification_email_html(username: str, verification_link: str) -> str:
       margin-bottom: 30px;
       line-height: 1.8;
     }}
-    .cta-button {{
-      display: inline-block;
-      background-color: {BAZAAR_PRIMARY_COLOR};
-      color: #000000;
-      padding: 14px 40px;
-      border-radius: 6px;
-      text-decoration: none;
-      font-weight: bold;
-      font-size: 16px;
-      margin: 20px 0;
-      transition: background-color 0.3s ease;
+    .code-box {{
+      background-color: #f9f9f9;
+      border: 2px solid {BAZAAR_PRIMARY_COLOR};
+      border-radius: 8px;
+      padding: 20px;
+      margin: 30px 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
     }}
-    .cta-button:hover {{
-      background-color: #d4900a;
+    .code-text {{
+      font-size: 28px;
+      font-weight: bold;
+      color: {BAZAAR_PRIMARY_COLOR};
+      letter-spacing: 2px;
+      font-family: 'Courier New', monospace;
+    }}
+    .copy-icon {{
+      cursor: pointer;
+      font-size: 20px;
+      color: {BAZAAR_PRIMARY_COLOR};
     }}
     .footer {{
       background-color: #f8f8f8;
@@ -110,13 +118,16 @@ def get_verification_email_html(username: str, verification_link: str) -> str:
       
       <div class="message">
         <p>Gracias por registrarte en <strong>Bazaar</strong>.</p>
-        <p>Verifica tu correo para activar tu cuenta y comenzar a usar todas nuestras funcionalidades.</p>
+        <p>Usa el código de abajo para verificar tu correo y activar tu cuenta.</p>
       </div>
       
-      <a href="{verification_link}" class="cta-button">Verificar Cuenta</a>
+      <div class="code-box">
+        <span class="code-text">{verification_code}</span>
+        <span class="copy-icon">📋</span>
+      </div>
       
       <div class="expiration">
-        ⏱️ Este enlace expira en 24 horas
+        ⏱️ Este código expira en 24 horas
       </div>
       
       <div class="security-note">

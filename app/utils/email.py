@@ -60,13 +60,13 @@ def send_email_html(
 
 
 def send_verification_email(
-    to_email: str, username: str, verification_link: str
+    to_email: str, username: str, verification_code: str
 ):
-    """Enviar email de verificación con template personalizado"""
-    html_content = get_verification_email_html(username, verification_link)
+    """Enviar email de verificación con código personalizado"""
+    html_content = get_verification_email_html(username, verification_code)
     send_email_html(
         to_email=to_email,
-        subject="Verificar tu cuenta - Bazaar",
+        subject="Verifica tu cuenta - Bazaar",
         html_body=html_content
     )
 

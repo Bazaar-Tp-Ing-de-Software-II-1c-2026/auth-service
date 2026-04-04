@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import or_
 from ..database import get_db
 from ..utils.email import send_email_html, send_verification_email, send_reset_password_email, send_welcome_email
+from ..utils.verification import generate_verification_code
 from .. import models
 from .. import security
 from .. import schemas
@@ -18,23 +19,21 @@ from google.auth.transport import requests
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 
-def _send_verification_email(user: models.User) -> None:
-    token_data = {"sub": str(user.id), "scope": "email-verification"}
-    verification_token = security.create_access_token(
-        token_data, expires_delta=timedelta(hours=24)
-    )
-    app_url = os.getenv("APP_PUBLIC_URL", "http://localhost:5173")
+def _send_verification_email(user: models.User, db: Session) -> None:
+    """Genera un código de verificación aleatorio y lo envía por email"""
+    # Generar código aleatorio de 8 caracteres
+    verification_code = generate_verification_code(length=8)
     
-    # Manejar esquemas personalizados (ej: bazaarfrontend://)
-    if app_url.endswith("://"):
-        link = f"{app_url}verify-email?token={verification_token}"
-    else:
-        link = f"{app_url}/verify-email?token={verification_token}"
+    # Guardar código y tiempo de expiración en la BD
+    user.verification_code = verification_code
+    user.verification_code_expires = datetime.utcnow() + timedelta(hours=24)
+    db.add(user)
+    db.commit()
 
     send_verification_email(
         to_email=user.email,
         username=user.first_name or user.username,
-        verification_link=link
+        verification_code=verification_code
     )
 
 
@@ -103,7 +102,7 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
 
     try:
         db.flush()
-        _send_verification_email(user)
+        _send_verification_email(user, db)
 
         db.commit()
     except Exception:
@@ -343,11 +342,69 @@ def resend_verification_email(
 ):
     user = db.query(models.User).filter(models.User.email == payload.email).first()
     if user and not user.is_verified:
-        _send_verification_email(user)
+        _send_verification_email(user, db)
 
     return {
         "message": "If an account with that email exists and is not verified, a new verification email has been sent."
     }
+
+
+@router.post("/verify-code", response_model=dict)
+def verify_code(
+    payload: schemas.VerifyCodeRequest,
+    db: Session = Depends(get_db),
+):
+    """Verifica el código de verificación enviado por email"""
+    user = db.query(models.User).filter(models.User.email == payload.email).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="Usuario no encontrado"
+        )
+    
+    if user.is_verified:
+        return {"message": "El correo ya está verificado. Puedes iniciar sesión."}
+    
+    # Verificar si el código existe
+    if not user.verification_code:
+        raise HTTPException(
+            status_code=400,
+            detail="No hay código de verificación enviado para esta cuenta"
+        )
+    
+    # Verificar si el código ha expirado
+    if user.verification_code_expires and user.verification_code_expires < datetime.utcnow():
+        raise HTTPException(
+            status_code=400,
+            detail="El código ha expirado. Solicita uno nuevo."
+        )
+    
+    # Verificar si el código es correcto (case-insensitive)
+    if user.verification_code.lower() != payload.code.lower():
+        raise HTTPException(
+            status_code=400,
+            detail="El código es incorrecto"
+        )
+    
+    # Marcar como verificado y limpiar el código
+    user.is_verified = True
+    user.verification_code = None
+    user.verification_code_expires = None
+    db.add(user)
+    db.commit()
+    
+    # Enviar email de bienvenida
+    try:
+        send_welcome_email(
+            to_email=user.email,
+            username=user.first_name or user.username
+        )
+    except Exception as e:
+        print(f"[MAIL] Error sending welcome email: {str(e)}")
+        # No lanzar excepción si el email de bienvenida falla
+    
+    return {"message": "Correo verificado exitosamente. Ya puedes iniciar sesión."}
 
 
 @router.get("/me", response_model=schemas.UserOut)

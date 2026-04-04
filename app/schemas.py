@@ -109,3 +109,13 @@ class ResetPassword(BaseModel):
 
 class GoogleLoginRequest(BaseModel):
     id_token: str
+
+
+class VerifyCodeRequest(BaseModel):
+    email: EmailStr
+    code: str
+
+    @field_validator("email")
+    @classmethod
+    def email_to_lower(cls, v: EmailStr) -> str:
+        return normalize_email(v)
