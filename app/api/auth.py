@@ -563,6 +563,19 @@ def update_me(
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    # Validar que el username sea único si se intenta cambiar
+    if payload.username is not None:
+        if payload.username != user.username:  # Solo validar si está siendo cambiado
+            existing_user = db.query(models.User).filter(
+                models.User.username == payload.username
+            ).first()
+            if existing_user:
+                raise HTTPException(
+                    status_code=400,
+                    detail="El nombre de usuario ya existe"
+                )
+        user.username = payload.username
+    
     # Solo actualiza los campos que vienen en el payload
     if payload.first_name is not None:
         user.first_name = payload.first_name

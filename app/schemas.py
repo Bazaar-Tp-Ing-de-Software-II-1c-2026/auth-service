@@ -63,6 +63,7 @@ class UserLogin(BaseModel):
 class UserUpdate(BaseModel):
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+    username: Optional[str] = None
     description: Optional[str] = None 
     
     class Config:
