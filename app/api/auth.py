@@ -557,14 +557,20 @@ def reset_password(
     return {"message": "Password reset successfully. You can now log in with your new password."}
 
 
-@router.put("/me", response_model=schemas.UserOut)
+@router.patch("/me", response_model=schemas.UserOut)
 def update_me(
     payload: schemas.UserUpdate,
     user: models.User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    user.first_name = payload.first_name
-    user.last_name = payload.last_name
+    # Solo actualiza los campos que vienen en el payload
+    if payload.first_name is not None:
+        user.first_name = payload.first_name
+    if payload.last_name is not None:
+        user.last_name = payload.last_name
+    if payload.description is not None:
+        user.description = payload.description
+    
     db.add(user)
     db.commit()
     db.refresh(user)
