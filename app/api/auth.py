@@ -574,20 +574,29 @@ def update_me(
                     status_code=400,
                     detail="El nombre de usuario ya existe"
                 )
-        user.username = payload.username
     
-    # Solo actualiza los campos que vienen en el payload
+    # Actualizar los campos
     if payload.first_name is not None:
         user.first_name = payload.first_name
     if payload.last_name is not None:
         user.last_name = payload.last_name
+    if payload.username is not None:
+        user.username = payload.username
     if payload.description is not None:
         user.description = payload.description
     
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
+    try:
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        return user
+    except Exception as e:
+        db.rollback()
+        print(f"Error updating user: {str(e)}")
+        raise HTTPException(
+            status_code=400,
+            detail=f"Error al actualizar perfil: {str(e)}"
+        )
 
 
 @router.post("/forgot-password", response_model=dict)
