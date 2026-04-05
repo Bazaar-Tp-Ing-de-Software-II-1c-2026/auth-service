@@ -5,7 +5,7 @@ from app.security import create_access_token
 
 class TestRegisterEndpoint:
     def test_register_success(self, client, valid_user_data):
-        with patch("app.api.auth.send_email_html") as mock_send_email:
+        with patch("app.api.auth.send_verification_email") as mock_send_email:
             response = client.post("/api/auth/register", json=valid_user_data)
 
         assert response.status_code == 200
@@ -44,7 +44,7 @@ class TestRegisterEndpoint:
         assert response.status_code == 422
 
     def test_register_user_created_in_database(self, client, db, valid_user_data):
-        with patch("app.api.auth.send_email_html"):
+        with patch("app.api.auth.send_verification_email"):
             response = client.post("/api/auth/register", json=valid_user_data)
 
         assert response.status_code == 200
@@ -248,7 +248,7 @@ class TestResendVerificationEmailEndpoint:
         db.add(user)
         db.commit()
 
-        with patch("app.api.auth.send_email_html") as mock_send_email:
+        with patch("app.api.auth.send_verification_email") as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": user.email},
@@ -259,7 +259,7 @@ class TestResendVerificationEmailEndpoint:
         mock_send_email.assert_called_once()
 
     def test_resend_verification_email_verified_user(self, client, test_user):
-        with patch("app.api.auth.send_email_html") as mock_send_email:
+        with patch("app.api.auth.send_verification_email") as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": test_user.email},
@@ -270,7 +270,7 @@ class TestResendVerificationEmailEndpoint:
         mock_send_email.assert_not_called()
 
     def test_resend_verification_email_user_not_found(self, client):
-        with patch("app.api.auth.send_email_html") as mock_send_email:
+        with patch("app.api.auth.send_verification_email") as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": "missing@example.com"},
