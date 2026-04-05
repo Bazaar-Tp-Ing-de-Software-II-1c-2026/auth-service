@@ -20,3 +20,4 @@ class User(Base):
     verification_code_expires = Column(DateTime, nullable=True)
     last_password_reset_request = Column(DateTime, nullable=True)
     last_verification_email_request = Column(DateTime, nullable=True)
+    description = Column(String(500), nullable=True, default="")
