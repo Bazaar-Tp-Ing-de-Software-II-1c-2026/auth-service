@@ -21,3 +21,4 @@ class User(Base):
     last_password_reset_request = Column(DateTime, nullable=True)
     last_verification_email_request = Column(DateTime, nullable=True)
     description = Column(String(500), nullable=True, default="")
+    profile_picture_url = Column(String, nullable=True, default=None)
