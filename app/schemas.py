@@ -1,7 +1,6 @@
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, HttpUrl
 from typing import Optional
 import re
-
 
 def normalize_email(v: EmailStr) -> str:
     return v.strip().lower()
@@ -60,30 +59,6 @@ class UserLogin(BaseModel):
             return v.strip().lower()
         return v.strip()
 
-class UserUpdate(BaseModel):
-    first_name: Optional[str] = None
-    last_name: Optional[str] = None
-    username: Optional[str] = None
-    description: Optional[str] = None 
-    
-    class Config:
-        from_attributes = True
-
-
-class UserOut(BaseModel):
-    id: int
-    email: EmailStr
-    first_name: str
-    last_name: str
-    role: str
-    blocked: bool = False
-    is_verified: bool = False
-    username: str
-
-    class Config:
-        from_attributes = True
-
-
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
@@ -140,3 +115,50 @@ class ResetPasswordWithCodeRequest(BaseModel):
     @classmethod
     def password_validator(cls, v: str) -> str:
         return validate_password_strength(v)
+
+class UserBase(BaseModel):
+    username: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    description: Optional[str] = None     
+    profile_picture_url: Optional[str] = None
+
+class UserOut(UserBase):
+    id: int
+    email: EmailStr
+    role: str
+    blocked: bool = False
+    is_verified: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+class UserPublicOut(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+
+class UserUpdate(BaseModel):
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    description: Optional[str] = None
+    profile_picture_url: Optional[HttpUrl] = None
+
+    @field_validator("first_name", "last_name")
+    @classmethod
+    def validate_names(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip()
+        if not normalized:
+            raise ValueError("El nombre no puede estar vacío")
+        if len(normalized) > 50:
+            raise ValueError("El nombre no puede superar 50 caracteres")
+        return normalized
+
+    @field_validator("description")
+    @classmethod
+    def validate_description(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip()
+        if len(normalized) > 280:
+            raise ValueError("La descripción no puede superar 280 caracteres")
+        return normalized or None
