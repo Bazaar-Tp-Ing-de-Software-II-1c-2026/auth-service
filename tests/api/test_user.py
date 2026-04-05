@@ -29,7 +29,7 @@ class TestUserProfileEndpoints:
             "profile_picture_url": "https://example.com/avatar.png",
         }
 
-        response = client.put("/api/users/me", headers=headers, json=payload)
+        response = client.patch("/api/users/me", headers=headers, json=payload)
 
         assert response.status_code == 200
         data = response.json()
@@ -47,7 +47,7 @@ class TestUserProfileEndpoints:
             "profile_picture_url": "not-a-url",
         }
 
-        response = client.put("/api/users/me", headers=headers, json=payload)
+        response = client.patch("/api/users/me", headers=headers, json=payload)
 
         assert response.status_code == 422
 
