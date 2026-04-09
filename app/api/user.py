@@ -50,12 +50,33 @@ def update_my_profile(
             detail="Error interno al procesar la actualización del perfil"
         )
 
-@router.get("/{username}", response_model=schemas.UserPublicOut)
-def get_user_public_profile(
+@router.get("/by-username/{username}", response_model=schemas.UserPublicOut)
+def get_user_public_profile_by_username(
     username: str, 
     db: Session = Depends(get_db)
 ):
     user = db.query(models.User).filter(models.User.username == username).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Usuario no encontrado"
+        )
+    
+    if user.blocked:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Este perfil no está disponible"
+        )
+        
+    return user
+
+@router.get("/{id}", response_model=schemas.UserPublicOut)
+def get_user_public_profile_by_id(
+    id: int,
+    db: Session = Depends(get_db)
+):
+    user = db.query(models.User).filter(models.User.id == id).first()
     
     if not user:
         raise HTTPException(
