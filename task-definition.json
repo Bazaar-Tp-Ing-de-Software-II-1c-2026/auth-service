@@ -1,0 +1,49 @@
+{
+    "containerDefinitions": [
+        {
+            "name": "auth",
+            "image": "960154457182.dkr.ecr.us-east-2.amazonaws.com/auth-service:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "name": "auth-8000-tcp",
+                    "containerPort": 8000,
+                    "hostPort": 8000,
+                    "protocol": "tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                { "name": "JWT_EXPIRE_MIN", "value": "360" },
+                { "name": "DATABASE_URL", "value": "postgresql://auth_service_user:clave_auth_segura@auth-db.cz2ociag6fbs.us-east-2.rds.amazonaws.com:5432/auth_db" },
+                { "name": "GOOGLE_CLIENT_ID_ANDROID", "value": "115422960498-ma84a1pkqvgvoonuec9s1i18ot79n7oo.apps.googleusercontent.com" },
+                { "name": "GOOGLE_CLIENT_ID_WEB", "value": "115422960498-agr42d5fgpvt3m8mhkvn87embf8a4ln4.apps.googleusercontent.com" },
+                { "name": "JWT_SECRET", "value": "test-secret-key" },
+                { "name": "RESEND_API_KEY", "value": "re_Jqw3fevg_JcEpxRyH3U6oNEQknYdtnF2b" },
+                { "name": "EMAIL_FROM", "value": "contacto@bazaar-app.me" }
+            ],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/auth-service-task",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "us-east-2",
+                    "awslogs-stream-prefix": "ecs"
+                }
+            }
+        }
+    ],
+    "family": "auth-service-task",
+    "executionRoleArn": "arn:aws:iam::960154457182:role/ecsTaskExecutionRole",
+    "networkMode": "awsvpc",
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "512",
+    "memory": "1024",
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    }
+}
