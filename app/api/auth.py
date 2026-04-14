@@ -73,9 +73,6 @@ def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
     if db.query(models.User).filter(models.User.email == payload.email).first():
         raise ServiceException(status_code=400, title="Bad Request", detail="El correo electrónico ya está registrado.")
 
-    if db.query(models.User).filter(models.User.username == payload.username).first():
-        raise ServiceException(status_code=400, title="Bad Request", detail="El nombre de usuario ya existe.")
-
     user = models.User(
         email=payload.email,
         username=payload.username,
