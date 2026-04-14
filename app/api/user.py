@@ -1,11 +1,20 @@
+import os
+import boto3
+import uuid
 from __future__ import annotations
 from typing import Any
-
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas
 from .auth import get_current_user 
+
+s3 = boto3.client(
+    "s3",
+    region_name=os.getenv("AWS_REGION")
+)
+
+BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -91,3 +100,36 @@ def get_user_public_profile_by_id(
         )
         
     return user
+
+@router.post("/me/upload-url")
+def generate_upload_url(
+    content_type: str,
+    current_user: models.User = Depends(get_current_user)
+):
+    if not content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="Tipo inválido")
+
+    ext = content_type.split("/")[-1]
+    filename = f"users/{current_user.id}/{uuid.uuid4()}.{ext}"
+
+    try:
+        upload_url = s3.generate_presigned_url(
+            "put_object",
+            Params={
+                "Bucket": BUCKET_NAME,
+                "Key": filename,
+                "ContentType": content_type
+            },
+            ExpiresIn=300
+        )
+
+        file_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{filename}"
+
+        return {
+            "upload_url": upload_url,
+            "file_url": file_url
+        }
+
+    except Exception as e:
+        print(f"Error generando URL: {e}")
+        raise HTTPException(status_code=500, detail="Error generando URL")
