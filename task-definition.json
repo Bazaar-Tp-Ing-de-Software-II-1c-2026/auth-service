@@ -21,7 +21,9 @@
                 { "name": "GOOGLE_CLIENT_ID_WEB", "value": "115422960498-agr42d5fgpvt3m8mhkvn87embf8a4ln4.apps.googleusercontent.com" },
                 { "name": "JWT_SECRET", "value": "test-secret-key" },
                 { "name": "RESEND_API_KEY", "value": "re_Jqw3fevg_JcEpxRyH3U6oNEQknYdtnF2b" },
-                { "name": "EMAIL_FROM", "value": "contacto@bazaar-app.me" }
+                { "name": "EMAIL_FROM", "value": "contacto@bazaar-app.me" },
+                { "name": "AWS_REGION", "value": "us-east-2" },
+                { "name": "S3_BUCKET_NAME", "value": "bazaar-app-bucket" }
             ],
             "logConfiguration": {
                 "logDriver": "awslogs",
