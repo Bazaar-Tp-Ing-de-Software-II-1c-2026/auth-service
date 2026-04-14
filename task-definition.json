@@ -23,7 +23,7 @@
                 { "name": "RESEND_API_KEY", "value": "re_Jqw3fevg_JcEpxRyH3U6oNEQknYdtnF2b" },
                 { "name": "EMAIL_FROM", "value": "contacto@bazaar-app.me" },
                 { "name": "AWS_REGION", "value": "us-east-2" },
-                { "name": "S3_BUCKET_NAME", "value": "bazaar-app-bucket" }
+                { "name": "S3_BUCKET_NAME", "value": "bazaar-server-imagenes" }
             ],
             "logConfiguration": {
                 "logDriver": "awslogs",
