@@ -38,7 +38,7 @@
     ],
     "family": "auth-service-task",
     "executionRoleArn": "arn:aws:iam::960154457182:role/ecsTaskExecutionRole",
-    "taskRoleArn": "arn:aws:iam::960154457182:role/auth-service-task-role",
+    "taskRoleArn": "arn:aws:iam::960154457182:role/Bazaar-Task-S3-Role",
     "networkMode": "awsvpc",
     "requiresCompatibilities": [
         "FARGATE"
