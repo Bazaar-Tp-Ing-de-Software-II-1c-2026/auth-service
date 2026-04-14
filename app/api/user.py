@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import os
 import boto3
-import uuid
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -111,7 +110,7 @@ def generate_upload_url(
         raise HTTPException(status_code=400, detail="Tipo inválido")
 
     ext = content_type.split("/")[-1]
-    filename = f"users/{current_user.id}/{uuid.uuid4()}.{ext}"
+    filename = f"users/{current_user.id}/avatar.{ext}"
 
     try:
         upload_url = s3.generate_presigned_url(
