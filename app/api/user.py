@@ -130,8 +130,7 @@ def generate_upload_url(
             Params={
                 "Bucket": BUCKET_NAME,
                 "Key": filename,
-                "ContentType": content_type,
-                "ACL": "public-read"
+                "ContentType": content_type
             },
             ExpiresIn=300
         )
