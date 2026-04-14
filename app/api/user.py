@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import os
 import boto3
 import uuid
-from __future__ import annotations
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
