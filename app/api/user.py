@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import os
 import boto3
+import logging
 from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
 from .. import models, schemas
-from .auth import get_current_user 
+from .auth import get_current_user
+
+logger = logging.getLogger(__name__) 
 
 s3 = boto3.client(
     "s3",
@@ -109,10 +112,19 @@ def generate_upload_url(
     if not content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Tipo inválido")
 
+    if not BUCKET_NAME:
+        logger.error("S3_BUCKET_NAME no está configurado")
+        raise HTTPException(
+            status_code=500,
+            detail="Configuración de S3 incompleta: BUCKET_NAME no definido"
+        )
+
     ext = content_type.split("/")[-1]
     filename = f"users/{current_user.id}/avatar.{ext}"
 
     try:
+        logger.info(f"Generando URL presignada para bucket={BUCKET_NAME}, key={filename}")
+        
         upload_url = s3.generate_presigned_url(
             "put_object",
             Params={
@@ -126,11 +138,16 @@ def generate_upload_url(
 
         file_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{filename}"
 
+        logger.info(f"URL presignada generada exitosamente para usuario {current_user.id}")
         return {
             "upload_url": upload_url,
             "file_url": file_url
         }
 
     except Exception as e:
-        print(f"Error generando URL: {e}")
-        raise HTTPException(status_code=500, detail="Error generando URL")
+        error_msg = str(e)
+        logger.error(f"Error generando URL presignada: {error_msg}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error generando URL presignada: {error_msg}"
+        )
