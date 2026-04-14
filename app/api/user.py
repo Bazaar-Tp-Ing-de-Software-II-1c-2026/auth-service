@@ -1,49 +1,41 @@
 from __future__ import annotations
 
-import os
-import boto3
-import logging
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from ..database import get_db
-from .. import models, schemas
-from .auth import get_current_user
+from loguru import logger
 
-logger = logging.getLogger(__name__) 
+from app.database import get_db
+from app import models, schemas
+from app.config import settings
+from app.exceptions.handler import ServiceException
+from app.api.dependencies import get_current_user
 
-s3 = boto3.client(
-    "s3",
-    region_name=os.getenv("AWS_REGION")
-)
+import boto3
 
-BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+s3 = boto3.client("s3", region_name=settings.AWS_REGION)
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
+
 @router.get("/me", response_model=schemas.UserOut)
 def get_my_profile(current_user: models.User = Depends(get_current_user)):
+    logger.debug(f"[USER ROUTER] GET /me: user_id={current_user.id}")
     return current_user
+
 
 @router.patch("/me", response_model=schemas.UserOut)
 def update_my_profile(
     payload: schemas.UserUpdate,
     db: Session = Depends(get_db),
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user),
 ) -> Any:
-
+    logger.debug(f"[USER ROUTER] PATCH /me: user_id={current_user.id}")
     update_data = payload.model_dump(exclude_unset=True, mode="json")
 
     if "username" in update_data and update_data["username"] != current_user.username:
-        user_exists = db.query(models.User).filter(
-            models.User.username == update_data["username"]
-        ).first()
-        
-        if user_exists:
-            raise HTTPException(
-                status_code=400, 
-                detail="El nombre de usuario ya existe"
-            )
+        if db.query(models.User).filter(models.User.username == update_data["username"]).first():
+            raise ServiceException(status_code=400, title="Bad Request", detail="El nombre de usuario ya existe.")
 
     for key, value in update_data.items():
         setattr(current_user, key, value)
@@ -52,101 +44,69 @@ def update_my_profile(
         db.add(current_user)
         db.commit()
         db.refresh(current_user)
+        logger.info(f"[USER ROUTER] Perfil actualizado EXITOSAMENTE: user_id={current_user.id}")
         return current_user
-        
     except Exception as e:
         db.rollback()
-        print(f"Error en update_my_profile: {e}")
-        raise HTTPException(
-            status_code=500, 
-            detail="Error interno al procesar la actualización del perfil"
-        )
+        logger.error(f"[USER ROUTER] Error actualizando perfil user_id={current_user.id}: {e}")
+        raise ServiceException(status_code=500, title="Internal Server Error", detail="Error interno al procesar la actualización del perfil.")
+
 
 @router.get("/by-username/{username}", response_model=schemas.UserPublicOut)
-def get_user_public_profile_by_username(
-    username: str, 
-    db: Session = Depends(get_db)
-):
+def get_user_public_profile_by_username(username: str, db: Session = Depends(get_db)):
+    logger.debug(f"[USER ROUTER] GET /by-username/{username}")
     user = db.query(models.User).filter(models.User.username == username).first()
-    
+
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Usuario no encontrado"
-        )
-    
+        raise ServiceException(status_code=404, title="Not Found", detail="Usuario no encontrado.")
+
     if user.blocked:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Este perfil no está disponible"
-        )
-        
+        raise ServiceException(status_code=403, title="Forbidden", detail="Este perfil no está disponible.")
+
     return user
 
+
 @router.get("/{id}", response_model=schemas.UserPublicOut)
-def get_user_public_profile_by_id(
-    id: int,
-    db: Session = Depends(get_db)
-):
+def get_user_public_profile_by_id(id: int, db: Session = Depends(get_db)):
+    logger.debug(f"[USER ROUTER] GET /{id}")
     user = db.query(models.User).filter(models.User.id == id).first()
-    
+
     if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, 
-            detail="Usuario no encontrado"
-        )
-    
+        raise ServiceException(status_code=404, title="Not Found", detail="Usuario no encontrado.")
+
     if user.blocked:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Este perfil no está disponible"
-        )
-        
+        raise ServiceException(status_code=403, title="Forbidden", detail="Este perfil no está disponible.")
+
     return user
+
 
 @router.post("/me/upload-url")
 def generate_upload_url(
     content_type: str,
-    current_user: models.User = Depends(get_current_user)
+    current_user: models.User = Depends(get_current_user),
 ):
-    if not content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="Tipo inválido")
+    logger.debug(f"[USER ROUTER] Generando upload URL: user_id={current_user.id}, content_type={content_type}")
 
-    if not BUCKET_NAME:
-        logger.error("S3_BUCKET_NAME no está configurado")
-        raise HTTPException(
-            status_code=500,
-            detail="Configuración de S3 incompleta: BUCKET_NAME no definido"
-        )
+    if not content_type.startswith("image/"):
+        raise ServiceException(status_code=400, title="Bad Request", detail="Tipo de contenido inválido. Solo se aceptan imágenes.")
+
+    if not settings.S3_BUCKET_NAME:
+        logger.error("[USER ROUTER] S3_BUCKET_NAME no está configurado")
+        raise ServiceException(status_code=500, title="Internal Server Error", detail="Configuración de S3 incompleta.")
 
     ext = content_type.split("/")[-1]
     filename = f"users/{current_user.id}/avatar.{ext}"
 
     try:
-        logger.info(f"Generando URL presignada para bucket={BUCKET_NAME}, key={filename}")
-        
         upload_url = s3.generate_presigned_url(
             "put_object",
-            Params={
-                "Bucket": BUCKET_NAME,
-                "Key": filename,
-                "ContentType": content_type
-            },
-            ExpiresIn=300
+            Params={"Bucket": settings.S3_BUCKET_NAME, "Key": filename, "ContentType": content_type},
+            ExpiresIn=300,
         )
-
-        file_url = f"https://{BUCKET_NAME}.s3.amazonaws.com/{filename}"
-
-        logger.info(f"URL presignada generada exitosamente para usuario {current_user.id}")
-        return {
-            "upload_url": upload_url,
-            "file_url": file_url
-        }
+        file_url = f"https://{settings.S3_BUCKET_NAME}.s3.amazonaws.com/{filename}"
+        logger.info(f"[USER ROUTER] Upload URL generada EXITOSAMENTE: user_id={current_user.id}, key={filename}")
+        return {"upload_url": upload_url, "file_url": file_url}
 
     except Exception as e:
-        error_msg = str(e)
-        logger.error(f"Error generando URL presignada: {error_msg}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error generando URL presignada: {error_msg}"
-        )
+        logger.error(f"[USER ROUTER] Error generando upload URL: user_id={current_user.id}, error={e}")
+        raise ServiceException(status_code=500, title="Internal Server Error", detail=f"Error generando URL presignada: {e}")
