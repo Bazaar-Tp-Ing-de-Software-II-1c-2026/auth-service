@@ -3,7 +3,7 @@ Utilidades para generación y verificación de códigos
 """
 import string
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 
 
 def generate_verification_code(length: int = 8) -> str:
@@ -30,4 +30,6 @@ def is_code_expired(expires_at: datetime) -> bool:
     Returns:
         bool: True si ha expirado, False si aún es válido
     """
-    return datetime.utcnow() > expires_at
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) > expires_at

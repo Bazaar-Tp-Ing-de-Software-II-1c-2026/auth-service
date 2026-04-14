@@ -29,6 +29,9 @@ services:
       - SMTP_SSL=True
       - SMTP_STARTTLS=False
       - EMAIL_FROM=Bazaar Auth <0bazaarnoreply@gmail.com>
+      - AWS_REGION=us-east-2
+      - S3_BUCKET_NAME=bazaar-server-imagenes
+      - RESEND_API_KEY=re_Jqw3fevg_JcEpxRyH3U6oNEQknYdtnF2b
     depends_on:
       db-auth:
         condition: service_healthy
