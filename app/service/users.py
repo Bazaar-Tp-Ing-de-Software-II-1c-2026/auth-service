@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
+from urllib.parse import unquote
 
 from loguru import logger
 from sqlalchemy.orm import Session
@@ -67,6 +68,7 @@ def get_user_public_profile_by_id(user_id: int, db: Session):
 def generate_upload_url(content_type: str, current_user: models.User):
     logger.debug(f"[USER ROUTER] Generando upload URL: user_id={current_user.id}, content_type={content_type}")
 
+    content_type = unquote(content_type)
     if not content_type.startswith("image/"):
         raise ServiceException(status_code=400, title="Bad Request", detail="Tipo de contenido inválido. Solo se aceptan imágenes.")
 
