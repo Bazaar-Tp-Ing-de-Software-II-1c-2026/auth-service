@@ -9,6 +9,7 @@ os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 
 from app.database import Base, get_db
 from app.models import User
+from app.exceptions.handler import ServiceException, problem_details_handler
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
@@ -20,6 +21,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 def create_test_app():
     from app.api import auth, user
     app = FastAPI(title="Bazaar Auth Service")
+    app.add_exception_handler(ServiceException, problem_details_handler)
     app.include_router(auth.router)
     app.include_router(user.router)
     

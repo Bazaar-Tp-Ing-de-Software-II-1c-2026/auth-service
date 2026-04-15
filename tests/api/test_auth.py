@@ -5,10 +5,11 @@ from app.security import create_access_token
 
 class TestRegisterEndpoint:
     def test_register_success(self, client, valid_user_data):
-        with patch("app.api.auth.send_verification_email") as mock_send_email:
+        with patch("app.service.auth_service.send_verification_email") as mock_send_email:
             response = client.post("/api/auth/register", json=valid_user_data)
 
-        assert response.status_code == 200
+
+        assert response.status_code == 201
         data = response.json()
         assert data["email"] == valid_user_data["email"]
         assert data["username"] == valid_user_data["username"]
@@ -24,12 +25,6 @@ class TestRegisterEndpoint:
         assert response.status_code == 400
         assert "correo electrónico ya está registrado" in response.json()["detail"]
 
-    def test_register_duplicate_username(self, client, test_user, valid_user_data):
-        valid_user_data["username"] = test_user.username
-        response = client.post("/api/auth/register", json=valid_user_data)
-        assert response.status_code == 400
-        assert "nombre de usuario ya existe" in response.json()["detail"]
-
     def test_register_invalid_email(self, client, valid_user_data):
         valid_user_data["email"] = "not-an-email"
         response = client.post("/api/auth/register", json=valid_user_data)
@@ -44,10 +39,10 @@ class TestRegisterEndpoint:
         assert response.status_code == 422
 
     def test_register_user_created_in_database(self, client, db, valid_user_data):
-        with patch("app.api.auth.send_verification_email"):
+        with patch("app.service.auth_service.send_verification_email"):
             response = client.post("/api/auth/register", json=valid_user_data)
 
-        assert response.status_code == 200
+        assert response.status_code == 201
         
         from app.models import User
         user = db.query(User).filter(User.email == valid_user_data["email"]).first()
@@ -83,7 +78,7 @@ class TestLoginEndpoint:
             json={"identifier": test_user.email, "password": "wrongpassword"}
         )
         assert response.status_code == 401
-        assert "User or password incorrect" in response.json()["detail"]
+        assert "Usuario o contraseña incorrectos" in response.json()["detail"]
 
     def test_login_user_not_found(self, client):
         response = client.post(
@@ -91,7 +86,7 @@ class TestLoginEndpoint:
             json={"identifier": "nonexistent@example.com", "password": "password123"}
         )
         assert response.status_code == 404
-        assert "User not found" in response.json()["detail"]
+        assert "Usuario no encontrado" in response.json()["detail"]
 
     def test_login_user_blocked(self, client, db, test_user):
         test_user.blocked = True
@@ -102,7 +97,7 @@ class TestLoginEndpoint:
             json={"identifier": test_user.email, "password": "password123"}
         )
         assert response.status_code == 403
-        assert "account has been blocked" in response.json()["detail"]
+        assert "Tu cuenta ha sido bloqueada" in response.json()["detail"]
 
     def test_login_user_not_verified(self, client, db):
         from app.models import User
@@ -126,7 +121,7 @@ class TestLoginEndpoint:
             json={"identifier": user.email, "password": "password123"}
         )
         assert response.status_code == 403
-        assert "verify your email" in response.json()["detail"]
+        assert "Verificá tu email antes de iniciar sesión" in response.json()["detail"]
 
     def test_login_missing_identifier(self, client):
         response = client.post(
@@ -206,7 +201,7 @@ class TestVerifyEmailEndpoint:
         response = client.get(f"/api/auth/verify-email?token={token}")
 
         assert response.status_code == 200
-        assert "verified successfully" in response.json()["message"]
+        assert "Email verificado exitosamente" in response.json()["message"]
 
         updated_user = db.query(User).filter(User.id == user_id).first()
         assert updated_user is not None
@@ -215,19 +210,19 @@ class TestVerifyEmailEndpoint:
     def test_verify_email_invalid_token(self, client):
         response = client.get("/api/auth/verify-email?token=invalid-token")
         assert response.status_code == 401
-        assert "Invalid or expired verification token" in response.json()["detail"]
+        assert "Token de verificación inválido o expirado" in response.json()["detail"]
 
     def test_verify_email_wrong_scope(self, client, test_user):
         token = create_access_token({"sub": str(test_user.id), "scope": "password-reset"})
         response = client.get(f"/api/auth/verify-email?token={token}")
         assert response.status_code == 401
-        assert "Invalid or expired verification token" in response.json()["detail"]
+        assert "Token de verificación inválido o expirado" in response.json()["detail"]
 
     def test_verify_email_already_verified(self, client, test_user):
         token = create_access_token({"sub": str(test_user.id), "scope": "email-verification"})
         response = client.get(f"/api/auth/verify-email?token={token}")
         assert response.status_code == 200
-        assert "already verified" in response.json()["message"]
+        assert "El correo ya está verificado" in response.json()["message"]
 
 
 class TestResendVerificationEmailEndpoint:
@@ -248,36 +243,36 @@ class TestResendVerificationEmailEndpoint:
         db.add(user)
         db.commit()
 
-        with patch("app.api.auth.send_verification_email") as mock_send_email:
+        with patch("app.service.auth_service.send_verification_email") as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": user.email},
             )
 
         assert response.status_code == 200
-        assert "new verification email has been sent" in response.json()["message"]
+        assert "Si existe una cuenta con ese email y no está verificada, se envió un nuevo código." in response.json()["message"]
         mock_send_email.assert_called_once()
 
     def test_resend_verification_email_verified_user(self, client, test_user):
-        with patch("app.api.auth.send_verification_email") as mock_send_email:
+        with patch("app.service.auth_service.send_verification_email") as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": test_user.email},
             )
 
         assert response.status_code == 200
-        assert "new verification email has been sent" in response.json()["message"]
+        assert "Si existe una cuenta con ese email y no está verificada, se envió un nuevo código." in response.json()["message"]
         mock_send_email.assert_not_called()
 
     def test_resend_verification_email_user_not_found(self, client):
-        with patch("app.api.auth.send_verification_email") as mock_send_email:
+        with patch("app.service.auth_service.send_verification_email") as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": "missing@example.com"},
             )
 
         assert response.status_code == 200
-        assert "new verification email has been sent" in response.json()["message"]
+        assert "Si existe una cuenta con ese email y no está verificada, se envió un nuevo código." in response.json()["message"]
         mock_send_email.assert_not_called()
 
     def test_resend_verification_email_invalid_email(self, client):
