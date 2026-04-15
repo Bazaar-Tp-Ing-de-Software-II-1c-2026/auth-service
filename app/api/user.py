@@ -3,12 +3,15 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends
+
+from urllib.parse import unquote
+#from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app import models, schemas
 from app.api.dependencies import get_current_user
 from app.database import get_db
-from app.services import users as users_service
+from app.service import users as users_service
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -25,12 +28,6 @@ def update_my_profile(
 	current_user: models.User = Depends(get_current_user),
 ) -> Any:
 	return users_service.update_my_profile(payload, db, current_user)
-
-
-#@router.get("/by-username/{username}", response_model=schemas.UserPublicOut)
-#def get_user_public_profile_by_username(username: str, db: Session = Depends(get_db)):
-#	return users_service.get_user_public_profile_by_username(username, db)
-
 
 @router.get("/{id}", response_model=schemas.UserPublicOut)
 def get_user_public_profile_by_id(id: int, db: Session = Depends(get_db)):
