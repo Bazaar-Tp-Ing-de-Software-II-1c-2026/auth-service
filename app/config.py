@@ -21,12 +21,6 @@ class Settings(BaseSettings):
     AWS_REGION: str = ""
     S3_BUCKET_NAME: str = ""
 
-    SMTP_HOST: str = ""
-    SMTP_PORT: int = 465
-    SMTP_USER: str = ""
-    SMTP_PASS: str = ""
-    SMTP_SSL: bool = True
-    SMTP_STARTTLS: bool = False
     EMAIL_FROM: str = ""
     RESEND_API_KEY: str = ""
 

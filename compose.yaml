@@ -21,14 +21,7 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql://user_auth:pass_auth@db-auth:5432/auth_db
-      - APP_PUBLIC_URL=http://localhost:8081
-      - SMTP_HOST=smtp.gmail.com
-      - SMTP_PORT=465
-      - SMTP_USER=0bazaarnoreply@gmail.com
-      - SMTP_PASS=REDACTED_SMTP_APP_PASSWORD
-      - SMTP_SSL=True
-      - SMTP_STARTTLS=False
-      - EMAIL_FROM=Bazaar Auth <0bazaarnoreply@gmail.com>
+      - EMAIL_FROM=contacto@bazaar-app.me
       - AWS_REGION=us-east-2
       - S3_BUCKET_NAME=bazaar-server-imagenes
       - RESEND_API_KEY=re_Jqw3fevg_JcEpxRyH3U6oNEQknYdtnF2b
