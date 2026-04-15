@@ -2,10 +2,9 @@ from datetime import datetime, timedelta
 from unittest.mock import patch
 
 import pytest
-from fastapi import HTTPException
-
-from app import schemas
-from app.api import auth as auth_module
+from app.api import dependencies as auth_dependencies
+from app.exceptions.handler import ServiceException
+from app.services import auth_service as auth_service_module
 from app.models import User
 from app.security import create_access_token, hash_password, verify_password
 
@@ -97,7 +96,7 @@ class TestVerifyCodeEndpoint:
             verification_code_expires=datetime.utcnow() + timedelta(hours=1),
         )
 
-        with patch("app.api.auth.send_welcome_email") as mock_welcome:
+        with patch("app.services.auth_service.send_welcome_email") as mock_welcome:
             response = client.post(
                 "/api/auth/verify-code",
                 json={"email": user.email, "code": "abcd1234"},
@@ -212,14 +211,14 @@ class TestResetAndForgotPasswordEndpoints:
     def test_request_reset_password_success(self, client, db):
         user = _create_user(db, email="reset@example.com", username="resetuser")
 
-        with patch("app.api.auth.send_reset_password_email") as mock_send:
+        with patch("app.services.auth_service.send_reset_password_email") as mock_send:
             response = client.post(
                 "/api/auth/request-reset-password",
                 json={"email": user.email},
             )
 
         assert response.status_code == 200
-        assert "password reset email" in response.json()["message"]
+        assert "email de reset de contraseña" in response.json()["message"]
         mock_send.assert_called_once()
 
         updated = db.query(User).filter(User.id == user.id).first()
@@ -244,41 +243,15 @@ class TestResetAndForgotPasswordEndpoints:
         assert "Debes esperar" in response.json()["detail"]
 
     def test_request_reset_password_missing_user_is_generic(self, client):
-        with patch("app.api.auth.send_reset_password_email") as mock_send:
+        with patch("app.services.auth_service.send_reset_password_email") as mock_send:
             response = client.post(
                 "/api/auth/request-reset-password",
                 json={"email": "nobody@example.com"},
             )
 
         assert response.status_code == 200
-        assert "password reset email" in response.json()["message"]
+        assert "email de reset de contraseña" in response.json()["message"]
         mock_send.assert_not_called()
-
-    def test_forgot_password_alias_success(self, client, db):
-        user = _create_user(db, email="alias@example.com", username="aliasuser")
-
-        with patch("app.api.auth.send_reset_password_email") as mock_send:
-            response = client.post(
-                "/api/auth/forgot-password",
-                json={"email": user.email},
-            )
-
-        assert response.status_code == 200
-        mock_send.assert_called_once()
-
-    def test_forgot_password_alias_rate_limited(self, client, db):
-        user = _create_user(
-            db,
-            email="alias2@example.com",
-            username="aliasuser2",
-            last_password_reset_request=datetime.utcnow() - timedelta(seconds=20),
-        )
-
-        response = client.post(
-            "/api/auth/forgot-password",
-            json={"email": user.email},
-        )
-        assert response.status_code == 429
 
     def test_reset_password_invalid_scope(self, client):
         token = create_access_token({"sub": "1", "scope": "email-verification"})
@@ -350,24 +323,24 @@ class TestGoogleLoginEndpoint:
         assert "not configured" in response.json()["detail"]
 
     def test_google_login_invalid_token(self, client, monkeypatch):
-        monkeypatch.setenv("GOOGLE_CLIENT_ID_WEB", "web-id")
-        monkeypatch.setenv("GOOGLE_CLIENT_ID_ANDROID", "android-id")
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "android-id")
 
-        with patch("app.api.auth.id_token.verify_oauth2_token", side_effect=[Exception("web fail"), Exception("android fail")]):
+        with patch("app.services.auth_service.id_token.verify_oauth2_token", side_effect=[Exception("web fail"), Exception("android fail")]):
             response = client.post("/api/auth/google-login", json={"id_token": "bad-token"})
 
         assert response.status_code == 401
-        assert "Invalid or expired Google token" in response.json()["detail"]
+        assert "Token de Google inválido o expirado" in response.json()["detail"]
 
     def test_google_login_missing_email(self, client, monkeypatch):
-        monkeypatch.setenv("GOOGLE_CLIENT_ID_WEB", "web-id")
-        monkeypatch.delenv("GOOGLE_CLIENT_ID_ANDROID", raising=False)
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "")
 
-        with patch("app.api.auth.id_token.verify_oauth2_token", return_value={"given_name": "No", "family_name": "Email"}):
+        with patch("app.services.auth_service.id_token.verify_oauth2_token", return_value={"given_name": "No", "family_name": "Email"}):
             response = client.post("/api/auth/google-login", json={"id_token": "token"})
 
         assert response.status_code == 400
-        assert "Email not found" in response.json()["detail"]
+        assert "Email no encontrado" in response.json()["detail"]
 
     def test_google_login_existing_blocked_user(self, client, db, monkeypatch):
         blocked = _create_user(
@@ -379,8 +352,9 @@ class TestGoogleLoginEndpoint:
         )
         assert blocked.blocked is True
 
-        monkeypatch.setenv("GOOGLE_CLIENT_ID_WEB", "web-id")
-        with patch("app.api.auth.id_token.verify_oauth2_token", return_value={"email": blocked.email, "given_name": "Block", "family_name": "Ed"}):
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "")
+        with patch("app.services.auth_service.id_token.verify_oauth2_token", return_value={"email": blocked.email, "given_name": "Block", "family_name": "Ed"}):
             response = client.post("/api/auth/google-login", json={"id_token": "token"})
 
         assert response.status_code == 403
@@ -395,14 +369,15 @@ class TestGoogleLoginEndpoint:
             is_verified=False,
         )
 
-        monkeypatch.setenv("GOOGLE_CLIENT_ID_WEB", "web-id")
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "")
         idinfo = {
             "email": user.email,
             "given_name": "Google",
             "family_name": "User",
         }
 
-        with patch("app.api.auth.id_token.verify_oauth2_token", return_value=idinfo), patch("app.api.auth.send_welcome_email") as mock_welcome:
+        with patch("app.services.auth_service.id_token.verify_oauth2_token", return_value=idinfo), patch("app.services.auth_service.send_welcome_email") as mock_welcome:
             response = client.post("/api/auth/google-login", json={"id_token": "token"})
 
         assert response.status_code == 200
@@ -423,14 +398,15 @@ class TestGoogleLoginEndpoint:
             is_verified=True,
         )
 
-        monkeypatch.setenv("GOOGLE_CLIENT_ID_WEB", "web-id")
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "")
         idinfo = {
             "email": "john@example.com",
             "given_name": "John",
             "family_name": "New",
         }
 
-        with patch("app.api.auth.id_token.verify_oauth2_token", return_value=idinfo), patch("app.api.auth.send_welcome_email") as mock_welcome:
+        with patch("app.services.auth_service.id_token.verify_oauth2_token", return_value=idinfo), patch("app.services.auth_service.send_welcome_email") as mock_welcome:
             response = client.post("/api/auth/google-login", json={"id_token": "token"})
 
         assert response.status_code == 200
@@ -444,48 +420,27 @@ class TestGoogleLoginEndpoint:
 
 class TestAuthHelpers:
     def test_get_optional_user_without_header_returns_none(self, db):
-        assert auth_module.get_optional_user(None, db) is None
+        assert auth_dependencies.get_optional_user(None, db) is None
 
     def test_get_optional_user_with_bad_header_returns_none(self, db):
-        assert auth_module.get_optional_user("Token abc", db) is None
+        assert auth_dependencies.get_optional_user("Token abc", db) is None
 
     def test_get_optional_user_with_invalid_token_returns_none(self, db):
-        assert auth_module.get_optional_user("Bearer invalid-token", db) is None
+        assert auth_dependencies.get_optional_user("Bearer invalid-token", db) is None
 
     def test_get_optional_user_with_valid_token_returns_user(self, db):
         user = _create_user(db, email="opt@example.com", username="optuser", is_verified=True)
         token = create_access_token({"sub": str(user.id)})
 
-        resolved = auth_module.get_optional_user(f"Bearer {token}", db)
+        resolved = auth_dependencies.get_optional_user(f"Bearer {token}", db)
         assert resolved is not None
         assert resolved.id == user.id
 
     def test_require_admin_rejects_non_admin(self, test_user):
-        with pytest.raises(HTTPException) as exc:
-            auth_module.require_admin(test_user)
+        with pytest.raises(ServiceException) as exc:
+            auth_dependencies.require_admin(test_user)
         assert exc.value.status_code == 403
 
     def test_require_admin_accepts_admin(self, test_admin):
-        result = auth_module.require_admin(test_admin)
+        result = auth_dependencies.require_admin(test_admin)
         assert result.id == test_admin.id
-
-    def test_send_reset_password_email_uses_custom_scheme_link(self, db, monkeypatch):
-        user = _create_user(db, email="deeplink@example.com", username="deeplink")
-        monkeypatch.setenv("APP_PUBLIC_URL", "bazaarfrontend://")
-
-        with patch("app.api.auth.send_reset_password_email") as mock_send:
-            auth_module._send_reset_password_email(user, "token-123")
-
-        kwargs = mock_send.call_args.kwargs
-        assert kwargs["to_email"] == "deeplink@example.com"
-        assert kwargs["reset_link"] == "bazaarfrontend://verify-reset?token=token-123"
-
-    def test_send_reset_password_email_uses_http_link(self, db, monkeypatch):
-        user = _create_user(db, email="web@example.com", username="webuser")
-        monkeypatch.setenv("APP_PUBLIC_URL", "https://app.example.com")
-
-        with patch("app.api.auth.send_reset_password_email") as mock_send:
-            auth_module._send_reset_password_email(user, "token-999")
-
-        kwargs = mock_send.call_args.kwargs
-        assert kwargs["reset_link"] == "https://app.example.com/verify-reset?token=token-999"

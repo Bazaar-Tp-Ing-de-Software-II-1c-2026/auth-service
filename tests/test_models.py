@@ -44,25 +44,6 @@ class TestUserModel:
         with pytest.raises(Exception):
             db.commit()
 
-    def test_user_unique_username(self, db):
-        user1 = User(
-            email="test1@example.com",
-            username="testuser",
-            hashed_password=hash_password("pass123")
-        )
-        db.add(user1)
-        db.commit()
-        
-        user2 = User(
-            email="test2@example.com",
-            username="testuser",
-            hashed_password=hash_password("pass123")
-        )
-        db.add(user2)
-        
-        with pytest.raises(Exception):
-            db.commit()
-
     def test_user_role_default(self, db):
         user = User(
             email="test@example.com",

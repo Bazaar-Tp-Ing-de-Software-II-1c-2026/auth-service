@@ -3,35 +3,17 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
-from fastapi import FastAPI
 
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 
 from app.database import Base, get_db
 from app.models import User
+from main import app
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
-)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-def create_test_app():
-    from app.api import auth, user
-    app = FastAPI(title="Bazaar Auth Service")
-    app.include_router(auth.router)
-    app.include_router(user.router)
-    
-    @app.get("/")
-    def home():
-        return {"message": "Bazaar Auth Service is running. "}
-    
-    @app.get("/status")
-    def status():
-        return {"status": "OK"}
-    
-    return app
 
 @pytest.fixture(scope="function")
 def db():
@@ -44,16 +26,13 @@ def db():
 
 @pytest.fixture(scope="function")
 def client(db):
-    app = create_test_app()
-    
     def override_get_db():
-        try:
-            yield db
-        finally:
-            db.close()
+        yield db
 
     app.dependency_overrides[get_db] = override_get_db
-    return TestClient(app)
+    with TestClient(app) as test_client:
+        yield test_client
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture

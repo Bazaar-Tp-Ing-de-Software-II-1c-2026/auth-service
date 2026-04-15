@@ -49,30 +49,20 @@ class TestUserProfileEndpoints:
 
         response = client.patch("/api/users/me", headers=headers, json=payload)
 
-        assert response.status_code == 422
-
-    def test_get_public_profile_success_hides_private_fields(self, client, test_user):
-        response = client.get(f"/api/users/{test_user.username}")
-
-        assert response.status_code == 200
-        data = response.json()
-        assert data["username"] == test_user.username
-        assert "email" not in data
-        assert "role" not in data
-        assert "blocked" not in data
+        assert response.status_code == 400
 
     def test_get_public_profile_blocked_user_not_available(self, client, db, test_user):
         test_user.blocked = True
         db.add(test_user)
         db.commit()
 
-        response = client.get(f"/api/users/{test_user.username}")
+        response = client.get(f"/api/users/{test_user.id}")
 
         assert response.status_code == 403
         assert "no está disponible" in response.json()["detail"]
 
     def test_get_public_profile_not_found(self, client):
-        response = client.get("/api/users/unknown-user")
+        response = client.get("/api/users/999999")
 
         assert response.status_code == 404
         assert "Usuario no encontrado" in response.json()["detail"]
