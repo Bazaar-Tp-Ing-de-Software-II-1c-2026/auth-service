@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+import secrets
+import string
 from jose import jwt, JWTError
 from passlib.context import CryptContext
 from app.config import settings
@@ -28,3 +30,7 @@ def decode_token(token: str) -> dict | None:
         return jwt.decode(token, settings.JWT_SECRET, algorithms=["HS256"])
     except JWTError:
         return None
+
+
+def generate_numeric_code(length: int = 6) -> str:
+    return "".join(secrets.choice(string.digits) for _ in range(length))
