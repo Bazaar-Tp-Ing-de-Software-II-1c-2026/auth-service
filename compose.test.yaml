@@ -1,0 +1,8 @@
+services:
+  auth-tests:
+    build:
+      context: .
+    container_name: auth-tests
+    environment:
+      - DATABASE_URL=sqlite:///./test.db
+    command: ["pytest", "-q"]

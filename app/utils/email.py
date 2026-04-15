@@ -1,6 +1,6 @@
 from __future__ import annotations
-import os
 from fastapi import HTTPException, status
+from app.config import settings
 from .email_templates import (
     get_verification_email_html,
     get_reset_password_email_html,
@@ -17,7 +17,7 @@ def send_email_html(
     to_email: str, subject: str, html_body: str, text_fallback: str | None = None
 ):
     """Send email using Resend API"""
-    api_key = os.getenv("RESEND_API_KEY")
+    api_key = settings.RESEND_API_KEY
     
     if not api_key:
         raise HTTPException(
@@ -32,7 +32,7 @@ def send_email_html(
         )
     
     resend.api_key = api_key
-    from_email = os.getenv("EMAIL_FROM", "onboarding@resend.dev")
+    from_email = settings.EMAIL_FROM
     
     try:
         r = resend.Emails.send({

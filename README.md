@@ -20,6 +20,17 @@ o con uvicorn directamente:
 uvicorn main:app --reload
 ```
 
+## Ejecutar la aplicación con docker:
+```bash
+sudo docker compose up --build
+```
+
+## Ejecutar los tests con docker:
+```bash
+sudo docker compose -f compose.test.yaml up --abort-on-container-exit --exit-code-from auth-tests
+```
+
+
 ## Tests
 
 La aplicación incluye una suite completa de tests con cobertura automática.
