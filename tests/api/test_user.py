@@ -49,7 +49,7 @@ class TestUserProfileEndpoints:
 
         response = client.patch("/api/users/me", headers=headers, json=payload)
 
-        assert response.status_code == 422
+        assert response.status_code == 400
 
     def test_get_public_profile_blocked_user_not_available(self, client, db, test_user):
         test_user.blocked = True

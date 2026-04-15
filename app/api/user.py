@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.api.dependencies import get_current_user
 from app.database import get_db
-from app.service import users as users_service
+from app.services import users as users_service
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 

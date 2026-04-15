@@ -5,7 +5,7 @@ from app.security import create_access_token
 
 class TestRegisterEndpoint:
     def test_register_success(self, client, valid_user_data):
-        with patch("app.service.auth_service.send_verification_email") as mock_send_email:
+        with patch("app.services.auth_service.send_verification_email") as mock_send_email:
             response = client.post("/api/auth/register", json=valid_user_data)
 
 
@@ -28,7 +28,7 @@ class TestRegisterEndpoint:
     def test_register_invalid_email(self, client, valid_user_data):
         valid_user_data["email"] = "not-an-email"
         response = client.post("/api/auth/register", json=valid_user_data)
-        assert response.status_code == 422
+        assert response.status_code == 400
 
     def test_register_missing_field(self, client):
         invalid_data = {
@@ -36,10 +36,10 @@ class TestRegisterEndpoint:
             "username": "testuser"
         }
         response = client.post("/api/auth/register", json=invalid_data)
-        assert response.status_code == 422
+        assert response.status_code == 400
 
     def test_register_user_created_in_database(self, client, db, valid_user_data):
-        with patch("app.service.auth_service.send_verification_email"):
+        with patch("app.services.auth_service.send_verification_email"):
             response = client.post("/api/auth/register", json=valid_user_data)
 
         assert response.status_code == 201
@@ -128,53 +128,52 @@ class TestLoginEndpoint:
             "/api/auth/login",
             json={"password": "password123"}
         )
-        assert response.status_code == 422
+        assert response.status_code == 400
 
     def test_login_missing_password(self, client):
         response = client.post(
             "/api/auth/login",
             json={"identifier": "test@example.com"}
         )
-        assert response.status_code == 422
+        assert response.status_code == 400
 
 
 class TestGetCurrentUserDependency:
     def test_get_current_user_valid_token(self, client, test_user):
         token = create_access_token({"sub": str(test_user.id)})
         headers = {"Authorization": f"Bearer {token}"}
-        response = client.get("/", headers=headers)
+        response = client.get("/livez", headers=headers)
         assert response.status_code == 200
 
     def test_get_current_user_missing_token(self, client):
-        response = client.get("/")
+        response = client.get("/livez")
         assert response.status_code == 200
 
     def test_get_current_user_invalid_token(self, client):
         headers = {"Authorization": "Bearer invalid-token"}
-        response = client.get("/", headers=headers)
+        response = client.get("/livez", headers=headers)
         assert response.status_code == 200
 
     def test_get_current_user_malformed_header(self, client):
         headers = {"Authorization": "NotBearer token"}
-        response = client.get("/", headers=headers)
+        response = client.get("/livez", headers=headers)
         assert response.status_code == 200
 
 
 class TestHomeEndpoint:
     def test_home_endpoint(self, client):
-        response = client.get("/")
+        response = client.get("/livez")
         assert response.status_code == 200
         data = response.json()
-        assert "message" in data
-        assert "Bazaar Auth Service" in data["message"]
+        assert data["status"] == "alive"
 
 
 class TestStatusEndpoint:
     def test_status_endpoint(self, client):
-        response = client.get("/status")
+        response = client.get("/readyz")
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "OK"
+        assert data["status"] == "ready"
 
 
 class TestVerifyEmailEndpoint:
@@ -243,7 +242,7 @@ class TestResendVerificationEmailEndpoint:
         db.add(user)
         db.commit()
 
-        with patch("app.service.auth_service.send_verification_email") as mock_send_email:
+        with patch("app.services.auth_service.send_verification_email") as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": user.email},
@@ -254,7 +253,7 @@ class TestResendVerificationEmailEndpoint:
         mock_send_email.assert_called_once()
 
     def test_resend_verification_email_verified_user(self, client, test_user):
-        with patch("app.service.auth_service.send_verification_email") as mock_send_email:
+        with patch("app.services.auth_service.send_verification_email") as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": test_user.email},
@@ -265,7 +264,7 @@ class TestResendVerificationEmailEndpoint:
         mock_send_email.assert_not_called()
 
     def test_resend_verification_email_user_not_found(self, client):
-        with patch("app.service.auth_service.send_verification_email") as mock_send_email:
+        with patch("app.services.auth_service.send_verification_email") as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": "missing@example.com"},
@@ -280,4 +279,4 @@ class TestResendVerificationEmailEndpoint:
             "/api/auth/resend-verification-email",
             json={"email": "invalid-email"},
         )
-        assert response.status_code == 422
+        assert response.status_code == 400

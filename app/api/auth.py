@@ -7,13 +7,13 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.api.dependencies import get_current_user
 from app.database import get_db
-from app.service import auth_service
+from app.services import auth_service
 from app.schemas.schemas import UserCreate, UserLogin, Token, UserOut, GoogleLoginRequest, ResendVerificationEmailRequest, VerifyCodeRequest, ForgotPasswordRequest, ResetPasswordWithCodeRequest, ResetPassword
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 @router.post("/register", response_model=UserOut, status_code=201)
-def register(payload: schemas.UserCreate, db: Session = Depends(get_db)):
+def register(payload: UserCreate, db: Session = Depends(get_db)):
     return auth_service.register(payload, db)
 
 
