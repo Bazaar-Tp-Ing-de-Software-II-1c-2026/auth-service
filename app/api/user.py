@@ -4,6 +4,7 @@ import os
 import boto3
 import logging
 from typing import Any
+from urllib.parse import unquote
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from ..database import get_db
@@ -130,6 +131,7 @@ def generate_upload_url(
     content_type: str,
     current_user: models.User = Depends(get_current_user)
 ):
+    content_type = unquote(content_type)
     if not content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="Tipo inválido")
 
