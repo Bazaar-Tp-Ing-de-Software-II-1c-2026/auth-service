@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from datetime import datetime, timedelta, timezone
 
+import httpx
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from loguru import logger
@@ -16,6 +17,25 @@ from app.utils.email import send_reset_password_email, send_verification_email, 
 from app.utils.verification import generate_verification_code
 
 _RATE_LIMIT_SECONDS = 60
+
+
+def _get_google_userinfo_from_access_token(access_token: str) -> dict | None:
+    """Fallback for web OAuth flows that return access_token instead of id_token."""
+    try:
+        response = httpx.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {access_token}"},
+            timeout=5.0,
+        )
+    except httpx.HTTPError as e:
+        logger.warning(f"[AUTH] Error consultando Google UserInfo: {e}")
+        return None
+
+    if response.status_code != 200:
+        logger.warning(f"[AUTH] Google UserInfo devolvió status={response.status_code}")
+        return None
+
+    return response.json()
 
 
 def _check_rate_limit(last_request: datetime | None, context: str) -> None:
@@ -113,13 +133,18 @@ def google_login(payload: schemas.GoogleLoginRequest, db: Session):
     if not settings.GOOGLE_CLIENT_ID_WEB and not settings.GOOGLE_CLIENT_ID_ANDROID:
         raise ServiceException(status_code=500, title="Internal Server Error", detail="Google Client IDs not configured")
 
+    raw_google_token = payload.id_token.strip()
     idinfo = None
     for client_id in filter(None, [settings.GOOGLE_CLIENT_ID_WEB, settings.GOOGLE_CLIENT_ID_ANDROID]):
         try:
-            idinfo = id_token.verify_oauth2_token(payload.id_token, google_requests.Request(), client_id)
+            idinfo = id_token.verify_oauth2_token(raw_google_token, google_requests.Request(), client_id)
             break
         except Exception as e:
             logger.warning(f"[AUTH] Fallo verificación Google con client_id={client_id}: {e}")
+
+    # Web flow can send access tokens (prefixed with ya29.) instead of JWT id_tokens.
+    if not idinfo and raw_google_token.startswith("ya29."):
+        idinfo = _get_google_userinfo_from_access_token(raw_google_token)
 
     if not idinfo:
         raise ServiceException(status_code=401, title="Unauthorized", detail="Token de Google inválido o expirado.")
