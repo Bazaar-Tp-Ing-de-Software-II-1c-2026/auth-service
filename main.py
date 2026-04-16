@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,15 +39,26 @@ app.add_exception_handler(ServiceException, problem_details_handler)
 
 
 @app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request, exc):
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    invalid_params = [
+        {
+            "in": err["loc"][0],  # body, query, path
+            "name": ".".join(map(str, err["loc"][1:])),
+            "reason": err["msg"],
+            "type": err["type"],
+        }
+        for err in exc.errors()
+    ]
+
     return JSONResponse(
         status_code=400,
         content={
             "type": "about:blank",
-            "title": "Bad request error",
+            "title": "Invalid request parameters",
             "status": 400,
-            "detail": "Invalid request data",
+            "detail": "One or more fields are invalid",
             "instance": str(request.url.path),
+            "invalid-params": invalid_params,
         },
         media_type="application/problem+json",
     )
