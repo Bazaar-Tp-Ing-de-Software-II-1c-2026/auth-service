@@ -40,13 +40,32 @@ app.add_exception_handler(ServiceException, problem_details_handler)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
+    errors = exc.errors()
+    error_messages = []
+    
+    for error in errors:
+        field = error.get("loc", [])[-1] if error.get("loc") else "unknown"
+        error_type = error.get("type", "")
+        msg = error.get("msg", "Invalid request data")
+        
+        # Detectar errores de email
+        if "email" in str(field).lower() and "value_error" in error_type:
+            error_messages.append("Formato de email inválido")
+        # Detectar errores de contraseña
+        elif "password" in str(field).lower() or "new_password" in str(field).lower():
+            error_messages.append(msg)
+        else:
+            error_messages.append(msg)
+    
+    detail = " | ".join(error_messages) if error_messages else "Invalid request data"
+    
     return JSONResponse(
         status_code=400,
         content={
             "type": "about:blank",
             "title": "Bad request error",
             "status": 400,
-            "detail": "Invalid request data",
+            "detail": detail,
             "instance": str(request.url.path),
         },
         media_type="application/problem+json",
