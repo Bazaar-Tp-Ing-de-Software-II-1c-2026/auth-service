@@ -86,6 +86,31 @@ def test_google_login_creates_new_user_and_returns_token(monkeypatch):
     db.refresh.assert_called_once()
 
 
+def test_google_login_access_token_fallback_works(monkeypatch):
+    monkeypatch.setattr(auth_service.settings, "GOOGLE_CLIENT_ID_WEB", "web")
+    monkeypatch.setattr(auth_service.settings, "GOOGLE_CLIENT_ID_ANDROID", "")
+
+    db = MagicMock()
+    access_token = "ya29.fake-token"
+    userinfo = {"email": "web@example.com", "given_name": "Web", "family_name": "User"}
+
+    with patch("app.services.auth_service.id_token.verify_oauth2_token", side_effect=Exception("not-jwt")), patch(
+        "app.services.auth_service._get_google_userinfo_from_access_token", return_value=userinfo
+    ), patch("app.services.auth_service.auth_repository.get_user_by_email", return_value=None), patch(
+        "app.services.auth_service.auth_repository.generate_unique_username", return_value="webuser"
+    ), patch("app.services.auth_service.auth_repository.create_user") as mock_create_user, patch(
+        "app.services.auth_service.security.hash_password", return_value="hashed"
+    ), patch("app.services.auth_service.security.create_access_token", return_value="token123"), patch(
+        "app.services.auth_service.send_welcome_email"
+    ):
+        result = auth_service.google_login(SimpleNamespace(id_token=access_token), db)
+
+    assert result == {"access_token": "token123", "token_type": "bearer"}
+    mock_create_user.assert_called_once()
+    db.commit.assert_called_once()
+    db.refresh.assert_called_once()
+
+
 def test_reset_password_token_mismatch_raises_401():
     payload = ResetPassword(token="token-1", new_password="StrongPass123")
     user = SimpleNamespace(reset_token="other", reset_token_expires=datetime.now(timezone.utc) + timedelta(hours=1))
