@@ -15,6 +15,8 @@ class Settings(BaseSettings):
 
     AWS_REGION: str = ""
     S3_BUCKET_NAME: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_ACCESS_KEY_ID: str = ""
 
     EMAIL_FROM: str = ""
     RESEND_API_KEY: str = ""
