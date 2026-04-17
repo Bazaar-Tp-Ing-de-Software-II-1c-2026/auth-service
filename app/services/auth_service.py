@@ -211,14 +211,14 @@ def verify_email(token: str, db: Session):
         raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
 
     if user.is_verified:
-        return {"message": "El correo ya está verificado."}
+        return {"message": "The email is already verified. You can now log in."}
 
     user.is_verified = True
     auth_repository.save(db, user)
     _send_welcome_email_safe(user)
 
     logger.info(f"[AUTH ROUTER] Email verificado EXITOSAMENTE: user_id={user.id}")
-    return {"message": "Email verificado exitosamente. Ya podés iniciar sesión."}
+    return {"message": "Email verified successfully. You can now log in."}
 
 
 def resend_verification_email(payload: schemas.ResendVerificationEmailRequest, db: Session):
@@ -231,7 +231,7 @@ def resend_verification_email(payload: schemas.ResendVerificationEmailRequest, d
         _send_verification_email(user, db)
         logger.info(f"[AUTH ROUTER] Email de verificación reenviado: user_id={user.id}")
 
-    return {"message": "Si existe una cuenta con ese email y no está verificada, se envió un nuevo código."}
+    return {"message": "If an account exists with that email and is not verified, a new code has been sent."}
 
 
 def verify_code(payload: schemas.VerifyCodeRequest, db: Session):
@@ -242,7 +242,7 @@ def verify_code(payload: schemas.VerifyCodeRequest, db: Session):
         raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
 
     if user.is_verified:
-        return {"message": "El correo ya está verificado. Podés iniciar sesión."}
+        return {"message": "The email is already verified. You can now log in."}
 
     if not user.verification_code:
         raise ServiceException(status_code=400, title="Bad Request", detail="No verification code has been sent for this account.")
@@ -260,7 +260,7 @@ def verify_code(payload: schemas.VerifyCodeRequest, db: Session):
     _send_welcome_email_safe(user)
 
     logger.info(f"[AUTH ROUTER] Código verificado EXITOSAMENTE: user_id={user.id}")
-    return {"message": "Correo verificado exitosamente. Ya podés iniciar sesión."}
+    return {"message": "Email verified successfully. You can now log in."}
 
 
 def request_reset_password(payload: schemas.ForgotPasswordRequest, db: Session):
@@ -283,7 +283,7 @@ def request_reset_password(payload: schemas.ForgotPasswordRequest, db: Session):
         )
         logger.info(f"[AUTH ROUTER] Email de reset enviado: user_id={user.id}")
 
-    return {"message": "Si existe una cuenta con ese email, se envió un email de reset de contraseña."}
+    return {"message": "If an account exists with that email, a password reset email has been sent."}
 
 
 def reset_password_with_code(payload: schemas.ResetPasswordWithCodeRequest, db: Session):
@@ -308,7 +308,7 @@ def reset_password_with_code(payload: schemas.ResetPasswordWithCodeRequest, db: 
     auth_repository.save(db, user)
 
     logger.info(f"[AUTH ROUTER] Contraseña reseteada EXITOSAMENTE: user_id={user.id}")
-    return {"message": "Contraseña actualizada exitosamente. Ya podés iniciar sesión con tu nueva contraseña."}
+    return {"message": "Password successfully updated. You can now log in with your new password."}
 
 
 def reset_password(payload: schemas.ResetPassword, db: Session):
@@ -340,4 +340,4 @@ def reset_password(payload: schemas.ResetPassword, db: Session):
     auth_repository.save(db, user)
 
     logger.info(f"[AUTH ROUTER] Contraseña reseteada por token EXITOSAMENTE: user_id={user.id}")
-    return {"message": "Contraseña reseteada exitosamente. Ya podés iniciar sesión con tu nueva contraseña."}
+    return {"message": "Password successfully updated. You can now log in with your new password."}

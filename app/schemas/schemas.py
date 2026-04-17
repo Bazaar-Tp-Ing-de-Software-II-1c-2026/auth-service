@@ -1,4 +1,5 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, HttpUrl, StringConstraints
+from pydantic_core import PydanticCustomError
 from typing import Optional, Annotated
 import re
 
@@ -13,13 +14,25 @@ def _normalize_email(v: EmailStr) -> str:
 
 def _validate_password_strength(v: str) -> str:
     if len(v) < 8:
-        raise ValueError("Password must be at least 8 characters long")
+        raise PydanticCustomError(
+            "password_too_short",
+            "Password must be at least 8 characters long",
+        )
     if not re.search(r"[A-Z]", v):
-        raise ValueError("Password must contain at least one uppercase letter")
+        raise PydanticCustomError(
+            "password_missing_uppercase",
+            "Password must contain at least one uppercase letter",
+        )
     if not re.search(r"[a-z]", v):
-        raise ValueError("Password must contain at least one lowercase letter")
+        raise PydanticCustomError(
+            "password_missing_lowercase",
+            "Password must contain at least one lowercase letter",
+        )
     if not re.search(r"[0-9]", v):
-        raise ValueError("Password must contain at least one number")
+        raise PydanticCustomError(
+            "password_missing_number",
+            "Password must contain at least one number",
+        )
     return v
 
 
@@ -39,9 +52,9 @@ class TokenData(BaseModel):
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
-    username: str
-    first_name: str
-    last_name: str
+    username: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    first_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    last_name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
     @field_validator("email")
     @classmethod

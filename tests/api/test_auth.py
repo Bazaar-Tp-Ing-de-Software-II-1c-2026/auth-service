@@ -41,6 +41,27 @@ class TestRegisterEndpoint:
         assert body["title"] == "Invalid request parameters"
         assert body["invalid-params"][0]["reason"] == "Field required"
 
+    def test_register_empty_last_name_returns_validation_error(self, client, valid_user_data):
+        valid_user_data["last_name"] = ""
+
+        response = client.post("/api/auth/register", json=valid_user_data)
+
+        assert response.status_code == 400
+        body = response.json()
+        assert body["title"] == "Invalid request parameters"
+        reasons = {param["name"]: param["reason"] for param in body["invalid-params"]}
+        assert reasons["last_name"] == "String should have at least 1 character"
+
+    def test_register_weak_password_returns_english_validation_error(self, client, valid_user_data):
+        valid_user_data["password"] = "short1A"
+
+        response = client.post("/api/auth/register", json=valid_user_data)
+
+        assert response.status_code == 400
+        body = response.json()
+        reasons = {param["name"]: param["reason"] for param in body["invalid-params"]}
+        assert reasons["password"] == "Password must be at least 8 characters long"
+
     def test_register_user_created_in_database(self, client, db, valid_user_data):
         with patch("app.services.auth_service.send_verification_email"):
             response = client.post("/api/auth/register", json=valid_user_data)

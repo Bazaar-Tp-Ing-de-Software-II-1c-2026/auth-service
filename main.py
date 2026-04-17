@@ -46,10 +46,12 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     messages = []
 
     for err in errors:
-        field = err["loc"][-1] if err.get("loc") else "unknown"
         location = err["loc"][0] if err.get("loc") else "unknown"
         msg = err.get("msg", "Invalid request data")
         error_type = err.get("type", "")
+
+        if isinstance(msg, str) and msg.startswith("Value error, "):
+            msg = msg.replace("Value error, ", "", 1)
 
         messages.append(msg)
 
