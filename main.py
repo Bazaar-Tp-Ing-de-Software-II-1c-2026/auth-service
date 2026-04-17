@@ -51,15 +51,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         msg = err.get("msg", "Invalid request data")
         error_type = err.get("type", "")
 
-        # 👉 mensajes más amigables (tu lógica)
-        if "email" in str(field).lower() and "value_error" in error_type:
-            friendly_msg = "Formato de email inválido"
-        elif "password" in str(field).lower():
-            friendly_msg = msg
-        else:
-            friendly_msg = msg
-
-        messages.append(friendly_msg)
+        messages.append(msg)
 
         invalid_params.append({
             "in": location,

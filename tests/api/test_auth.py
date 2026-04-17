@@ -37,6 +37,9 @@ class TestRegisterEndpoint:
         }
         response = client.post("/api/auth/register", json=invalid_data)
         assert response.status_code == 400
+        body = response.json()
+        assert body["title"] == "Invalid request parameters"
+        assert body["invalid-params"][0]["reason"] == "Field required"
 
     def test_register_user_created_in_database(self, client, db, valid_user_data):
         with patch("app.services.auth_service.send_verification_email"):
@@ -136,6 +139,9 @@ class TestLoginEndpoint:
             json={"identifier": "test@example.com"}
         )
         assert response.status_code == 400
+        body = response.json()
+        assert body["title"] == "Invalid request parameters"
+        assert body["invalid-params"][0]["reason"] == "Field required"
 
 
 class TestGetCurrentUserDependency:
