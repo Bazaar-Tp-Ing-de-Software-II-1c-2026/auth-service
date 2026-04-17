@@ -13,7 +13,7 @@ class TestGetCurrentUser:
             get_current_user(authorization=None, db=db)
 
         assert exc.value.status_code == 401
-        assert "Token faltante" in exc.value.detail
+        assert "Missing token" in exc.value.detail
 
     def test_invalid_scheme_raises_401(self, db):
         with pytest.raises(ServiceException) as exc:
@@ -27,7 +27,7 @@ class TestGetCurrentUser:
                 get_current_user(authorization="Bearer invalid", db=db)
 
         assert exc.value.status_code == 401
-        assert "Token inválido" in exc.value.detail
+        assert "Invalid token" in exc.value.detail
 
     def test_missing_sub_raises_401(self, db):
         with patch("app.api.dependencies.security.decode_token", return_value={"sub": None}):
@@ -35,7 +35,7 @@ class TestGetCurrentUser:
                 get_current_user(authorization="Bearer token", db=db)
 
         assert exc.value.status_code == 401
-        assert "falta sub" in exc.value.detail
+        assert "missing user id" in exc.value.detail
 
     def test_user_not_found_raises_404(self, db):
         with patch("app.api.dependencies.security.decode_token", return_value={"sub": "999999"}):
@@ -43,7 +43,7 @@ class TestGetCurrentUser:
                 get_current_user(authorization="Bearer token", db=db)
 
         assert exc.value.status_code == 404
-        assert "Usuario no encontrado" in exc.value.detail
+        assert "User not found" in exc.value.detail
 
     def test_valid_token_returns_user(self, db, test_user):
         with patch("app.api.dependencies.security.decode_token", return_value={"sub": str(test_user.id)}):

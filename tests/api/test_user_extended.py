@@ -75,7 +75,7 @@ class TestUserExtraEndpoints:
             )
 
         assert response.status_code == 500
-        assert "Error generando URL presignada" in response.json()["detail"]
+        assert "Error generating presigned URL" in response.json()["detail"]
 
     def test_update_profile_ignores_unknown_fields(self, client, test_user):
         token = create_access_token({"sub": str(test_user.id)})

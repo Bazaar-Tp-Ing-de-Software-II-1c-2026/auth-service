@@ -17,7 +17,7 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
             
             for error in errors:
                 field = error.get("loc", [])[-1] if error.get("loc") else "unknown"
-                msg = error.get("msg", "Dato inválido")
+                msg = error.get("msg", "Invalid data")
 
                 error_messages.append(msg)
             

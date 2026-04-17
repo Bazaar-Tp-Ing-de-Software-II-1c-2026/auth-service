@@ -13,15 +13,15 @@ def test_check_rate_limit_raises_when_called_too_soon():
     last_request = datetime.now(timezone.utc) - timedelta(seconds=10)
 
     with pytest.raises(ServiceException) as exc:
-        auth_service._check_rate_limit(last_request, "solicitar otro reset")
+        auth_service._check_rate_limit(last_request, "requesting another password reset")
 
     assert exc.value.status_code == 429
-    assert "Debes esperar" in exc.value.detail
+    assert "Please wait before" in exc.value.detail
 
 
 def test_check_rate_limit_allows_when_window_elapsed():
     last_request = datetime.now(timezone.utc) - timedelta(seconds=120)
-    auth_service._check_rate_limit(last_request, "solicitar otro reset")
+    auth_service._check_rate_limit(last_request, "requesting another password reset")
 
 
 def test_send_welcome_email_safe_swallows_exceptions():
@@ -140,7 +140,7 @@ def test_reset_password_success_updates_user_and_clears_token():
     ) as mock_save:
         result = auth_service.reset_password(payload, MagicMock())
 
-    assert result["message"].startswith("Contraseña reseteada exitosamente")
+    assert result["message"].startswith("Password reset successfully")
     assert user.hashed_password == "newhash"
     assert user.reset_token is None
     assert user.reset_token_expires is None

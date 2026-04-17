@@ -23,7 +23,7 @@ class TestRegisterEndpoint:
         valid_user_data["email"] = test_user.email
         response = client.post("/api/auth/register", json=valid_user_data)
         assert response.status_code == 400
-        assert "correo electrónico ya está registrado" in response.json()["detail"]
+        assert "Email is already registered" in response.json()["detail"]
 
     def test_register_invalid_email(self, client, valid_user_data):
         valid_user_data["email"] = "not-an-email"
@@ -81,7 +81,21 @@ class TestLoginEndpoint:
             json={"identifier": test_user.email, "password": "wrongpassword"}
         )
         assert response.status_code == 401
-        assert "Usuario o contraseña incorrectos" in response.json()["detail"]
+        assert "Invalid username or password" in response.json()["detail"]
+
+    def test_login_empty_payload_returns_validation_error(self, client):
+        response = client.post(
+            "/api/auth/login",
+            json={"identifier": "", "password": ""}
+        )
+
+        assert response.status_code == 400
+        body = response.json()
+        assert body["title"] == "Invalid request parameters"
+        assert len(body["invalid-params"]) == 2
+        reasons = {param["name"]: param["reason"] for param in body["invalid-params"]}
+        assert reasons["identifier"] == "String should have at least 1 character"
+        assert reasons["password"] == "String should have at least 1 character"
 
     def test_login_user_not_found(self, client):
         response = client.post(
@@ -89,7 +103,7 @@ class TestLoginEndpoint:
             json={"identifier": "nonexistent@example.com", "password": "password123"}
         )
         assert response.status_code == 404
-        assert "Usuario no encontrado" in response.json()["detail"]
+        assert "User not found" in response.json()["detail"]
 
     def test_login_user_blocked(self, client, db, test_user):
         test_user.blocked = True
@@ -100,7 +114,7 @@ class TestLoginEndpoint:
             json={"identifier": test_user.email, "password": "password123"}
         )
         assert response.status_code == 403
-        assert "Tu cuenta ha sido bloqueada" in response.json()["detail"]
+        assert "Your account has been blocked" in response.json()["detail"]
 
     def test_login_user_not_verified(self, client, db):
         from app.models import User
@@ -124,7 +138,7 @@ class TestLoginEndpoint:
             json={"identifier": user.email, "password": "password123"}
         )
         assert response.status_code == 403
-        assert "Verificá tu email antes de iniciar sesión" in response.json()["detail"]
+        assert "Please verify your email before logging in" in response.json()["detail"]
 
     def test_login_missing_identifier(self, client):
         response = client.post(
@@ -215,13 +229,13 @@ class TestVerifyEmailEndpoint:
     def test_verify_email_invalid_token(self, client):
         response = client.get("/api/auth/verify-email?token=invalid-token")
         assert response.status_code == 401
-        assert "Token de verificación inválido o expirado" in response.json()["detail"]
+        assert "Invalid or expired verification token" in response.json()["detail"]
 
     def test_verify_email_wrong_scope(self, client, test_user):
         token = create_access_token({"sub": str(test_user.id), "scope": "password-reset"})
         response = client.get(f"/api/auth/verify-email?token={token}")
         assert response.status_code == 401
-        assert "Token de verificación inválido o expirado" in response.json()["detail"]
+        assert "Invalid or expired verification token" in response.json()["detail"]
 
     def test_verify_email_already_verified(self, client, test_user):
         token = create_access_token({"sub": str(test_user.id), "scope": "email-verification"})
