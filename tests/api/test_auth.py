@@ -241,7 +241,7 @@ class TestVerifyEmailEndpoint:
         response = client.get(f"/api/auth/verify-email?token={token}")
 
         assert response.status_code == 200
-        assert "Email verificado exitosamente" in response.json()["message"]
+        assert "Email verified successfully" in response.json()["message"]
 
         updated_user = db.query(User).filter(User.id == user_id).first()
         assert updated_user is not None
@@ -262,7 +262,7 @@ class TestVerifyEmailEndpoint:
         token = create_access_token({"sub": str(test_user.id), "scope": "email-verification"})
         response = client.get(f"/api/auth/verify-email?token={token}")
         assert response.status_code == 200
-        assert "El correo ya está verificado" in response.json()["message"]
+        assert "The email is already verified" in response.json()["message"]
 
 
 class TestResendVerificationEmailEndpoint:
@@ -290,7 +290,7 @@ class TestResendVerificationEmailEndpoint:
             )
 
         assert response.status_code == 200
-        assert "Si existe una cuenta con ese email y no está verificada, se envió un nuevo código." in response.json()["message"]
+        assert "If an account exists with that email and is not verified, a new code has been sent." in response.json()["message"]
         mock_send_email.assert_called_once()
 
     def test_resend_verification_email_verified_user(self, client, test_user):
@@ -301,7 +301,7 @@ class TestResendVerificationEmailEndpoint:
             )
 
         assert response.status_code == 200
-        assert "Si existe una cuenta con ese email y no está verificada, se envió un nuevo código." in response.json()["message"]
+        assert "If an account exists with that email and is not verified, a new code has been sent." in response.json()["message"]
         mock_send_email.assert_not_called()
 
     def test_resend_verification_email_user_not_found(self, client):
@@ -312,7 +312,7 @@ class TestResendVerificationEmailEndpoint:
             )
 
         assert response.status_code == 200
-        assert "Si existe una cuenta con ese email y no está verificada, se envió un nuevo código." in response.json()["message"]
+        assert "If an account exists with that email and is not verified, a new code has been sent." in response.json()["message"]
         mock_send_email.assert_not_called()
 
     def test_resend_verification_email_invalid_email(self, client):

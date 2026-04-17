@@ -43,7 +43,7 @@ class TestVerifyCodeEndpoint:
             json={"email": test_user.email, "code": "ABC12345"},
         )
         assert response.status_code == 200
-        assert "ya está verificado" in response.json()["message"]
+        assert "already verified" in response.json()["message"]
 
     def test_verify_code_requires_existing_code(self, client, db):
         user = _create_user(db, email="nocode@example.com", username="nocode", is_verified=False)
@@ -103,7 +103,7 @@ class TestVerifyCodeEndpoint:
             )
 
         assert response.status_code == 200
-        assert "verificado exitosamente" in response.json()["message"]
+        assert "verified successfully" in response.json()["message"]
         mock_welcome.assert_called_once()
 
         updated = db.query(User).filter(User.id == user.id).first()
@@ -218,7 +218,7 @@ class TestResetAndForgotPasswordEndpoints:
             )
 
         assert response.status_code == 200
-        assert "email de reset de contraseña" in response.json()["message"]
+        assert "password reset email has been sent" in response.json()["message"]
         mock_send.assert_called_once()
 
         updated = db.query(User).filter(User.id == user.id).first()
@@ -250,7 +250,7 @@ class TestResetAndForgotPasswordEndpoints:
             )
 
         assert response.status_code == 200
-        assert "email de reset de contraseña" in response.json()["message"]
+        assert "password reset email has been sent" in response.json()["message"]
         mock_send.assert_not_called()
 
     def test_reset_password_invalid_scope(self, client):
