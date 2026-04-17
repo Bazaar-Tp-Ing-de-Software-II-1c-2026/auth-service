@@ -340,4 +340,4 @@ def reset_password(payload: schemas.ResetPassword, db: Session):
     auth_repository.save(db, user)
 
     logger.info(f"[AUTH ROUTER] Contraseña reseteada por token EXITOSAMENTE: user_id={user.id}")
-    return {"message": "Password successfully updated. You can now log in with your new password."}
+    return {"message": "Password reset successfully. You can now log in with your new password."}
