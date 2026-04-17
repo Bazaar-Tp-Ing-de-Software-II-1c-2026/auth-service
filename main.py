@@ -40,15 +40,35 @@ app.add_exception_handler(ServiceException, problem_details_handler)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    invalid_params = [
-        {
-            "in": err["loc"][0],  # body, query, path
+    errors = exc.errors()
+
+    invalid_params = []
+    messages = []
+
+    for err in errors:
+        field = err["loc"][-1] if err.get("loc") else "unknown"
+        location = err["loc"][0] if err.get("loc") else "unknown"
+        msg = err.get("msg", "Invalid request data")
+        error_type = err.get("type", "")
+
+        # 👉 mensajes más amigables (tu lógica)
+        if "email" in str(field).lower() and "value_error" in error_type:
+            friendly_msg = "Formato de email inválido"
+        elif "password" in str(field).lower():
+            friendly_msg = msg
+        else:
+            friendly_msg = msg
+
+        messages.append(friendly_msg)
+
+        invalid_params.append({
+            "in": location,
             "name": ".".join(map(str, err["loc"][1:])),
-            "reason": err["msg"],
-            "type": err["type"],
-        }
-        for err in exc.errors()
-    ]
+            "reason": msg,
+            "type": error_type,
+        })
+
+    detail = " | ".join(messages) if messages else "Invalid request data"
 
     return JSONResponse(
         status_code=400,
@@ -56,9 +76,9 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "type": "about:blank",
             "title": "Invalid request parameters",
             "status": 400,
-            "detail": "One or more fields are invalid",
+            "detail": detail,  # 👈 humano
             "instance": str(request.url.path),
-            "invalid-params": invalid_params,
+            "invalid-params": invalid_params,  # 👈 estructurado
         },
         media_type="application/problem+json",
     )
