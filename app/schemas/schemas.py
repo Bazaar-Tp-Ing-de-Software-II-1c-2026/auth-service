@@ -1,5 +1,5 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, HttpUrl
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, HttpUrl, StringConstraints
+from typing import Optional, Annotated
 import re
 
 
@@ -13,13 +13,13 @@ def _normalize_email(v: EmailStr) -> str:
 
 def _validate_password_strength(v: str) -> str:
     if len(v) < 8:
-        raise ValueError("La contraseña debe tener al menos 8 caracteres")
+        raise ValueError("Password must be at least 8 characters long")
     if not re.search(r"[A-Z]", v):
-        raise ValueError("Debe contener al menos una mayúscula")
+        raise ValueError("Password must contain at least one uppercase letter")
     if not re.search(r"[a-z]", v):
-        raise ValueError("Debe contener al menos una minúscula")
+        raise ValueError("Password must contain at least one lowercase letter")
     if not re.search(r"[0-9]", v):
-        raise ValueError("Debe contener al menos un número")
+        raise ValueError("Password must contain at least one number")
     return v
 
 
@@ -55,15 +55,16 @@ class UserCreate(BaseModel):
 
 
 class UserLogin(BaseModel):
-    identifier: str
-    password: str
+    identifier: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+    password: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
     @field_validator("identifier")
     @classmethod
     def normalize_identifier(cls, v: str) -> str:
         if "@" in v:
-            return v.strip().lower()
-        return v.strip()
+            return v.lower()
+
+        return v
 
 
 class GoogleLoginRequest(BaseModel):
@@ -163,9 +164,9 @@ class UserUpdate(BaseModel):
             return v
         normalized = v.strip()
         if not normalized:
-            raise ValueError("El nombre no puede estar vacío")
+            raise ValueError("Name cannot be empty")
         if len(normalized) > 50:
-            raise ValueError("El nombre no puede superar 50 caracteres")
+            raise ValueError("Name cannot exceed 50 characters")
         return normalized
 
     @field_validator("description")
@@ -175,5 +176,5 @@ class UserUpdate(BaseModel):
             return v
         normalized = v.strip()
         if len(normalized) > 280:
-            raise ValueError("La descripción no puede superar 280 caracteres")
+            raise ValueError("Description cannot exceed 280 characters")
         return normalized or None

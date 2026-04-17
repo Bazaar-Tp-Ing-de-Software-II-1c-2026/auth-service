@@ -15,21 +15,21 @@ def get_current_user(
     logger.debug("[AUTH] Validando token de autorización")
 
     if not authorization or not authorization.lower().startswith("bearer "):
-        raise ServiceException(status_code=401, title="Unauthorized", detail="Token faltante")
+        raise ServiceException(status_code=401, title="Unauthorized", detail="Missing token")
 
     token = authorization.split()[1]
     data = security.decode_token(token)
 
     if not data:
-        raise ServiceException(status_code=401, title="Unauthorized", detail="Token inválido")
+        raise ServiceException(status_code=401, title="Unauthorized", detail="Invalid token")
 
     user_id = data.get("sub")
     if user_id is None:
-        raise ServiceException(status_code=401, title="Unauthorized", detail="Token inválido: falta sub")
+        raise ServiceException(status_code=401, title="Unauthorized", detail="Invalid token: missing user id")
 
     user = db.get(models.User, int(user_id))
     if not user:
-        raise ServiceException(status_code=404, title="Not Found", detail="Usuario no encontrado")
+        raise ServiceException(status_code=404, title="Not Found", detail="User not found")
 
     logger.debug(f"[AUTH] Usuario autenticado: id={user.id}, username={user.username}")
     return user

@@ -35,7 +35,7 @@ class TestVerifyCodeEndpoint:
             json={"email": "missing@example.com", "code": "ABC12345"},
         )
         assert response.status_code == 404
-        assert "Usuario no encontrado" in response.json()["detail"]
+        assert "User not found" in response.json()["detail"]
 
     def test_verify_code_already_verified(self, client, test_user):
         response = client.post(
@@ -53,7 +53,7 @@ class TestVerifyCodeEndpoint:
             json={"email": user.email, "code": "ABC12345"},
         )
         assert response.status_code == 400
-        assert "No hay código de verificación" in response.json()["detail"]
+        assert "No verification code has been sent" in response.json()["detail"]
 
     def test_verify_code_expired(self, client, db):
         user = _create_user(
@@ -69,7 +69,7 @@ class TestVerifyCodeEndpoint:
             json={"email": user.email, "code": "ABCD1234"},
         )
         assert response.status_code == 400
-        assert "ha expirado" in response.json()["detail"]
+        assert "Code has expired" in response.json()["detail"]
 
     def test_verify_code_wrong_code(self, client, db):
         user = _create_user(
@@ -85,7 +85,7 @@ class TestVerifyCodeEndpoint:
             json={"email": user.email, "code": "ZZZZ9999"},
         )
         assert response.status_code == 400
-        assert "incorrecto" in response.json()["detail"]
+        assert "Incorrect code" in response.json()["detail"]
 
     def test_verify_code_success_case_insensitive(self, client, db):
         user = _create_user(
@@ -136,7 +136,7 @@ class TestResetPasswordWithCodeEndpoint:
             },
         )
         assert response.status_code == 400
-        assert "No hay código de reseteo" in response.json()["detail"]
+        assert "No password reset code has been sent" in response.json()["detail"]
 
     def test_reset_with_code_expired(self, client, db):
         user = _create_user(
@@ -156,7 +156,7 @@ class TestResetPasswordWithCodeEndpoint:
             },
         )
         assert response.status_code == 400
-        assert "ha expirado" in response.json()["detail"]
+        assert "Code has expired" in response.json()["detail"]
 
     def test_reset_with_code_wrong_code(self, client, db):
         user = _create_user(
@@ -176,7 +176,7 @@ class TestResetPasswordWithCodeEndpoint:
             },
         )
         assert response.status_code == 400
-        assert "incorrecto" in response.json()["detail"]
+        assert "Incorrect code" in response.json()["detail"]
 
     def test_reset_with_code_success(self, client, db):
         user = _create_user(
@@ -240,7 +240,7 @@ class TestResetAndForgotPasswordEndpoints:
             json={"email": user.email},
         )
         assert response.status_code == 429
-        assert "Debes esperar" in response.json()["detail"]
+        assert "Please wait before" in response.json()["detail"]
 
     def test_request_reset_password_missing_user_is_generic(self, client):
         with patch("app.services.auth_service.send_reset_password_email") as mock_send:
@@ -330,7 +330,7 @@ class TestGoogleLoginEndpoint:
             response = client.post("/api/auth/google-login", json={"id_token": "bad-token"})
 
         assert response.status_code == 401
-        assert "Token de Google inválido o expirado" in response.json()["detail"]
+        assert "Invalid or expired Google token" in response.json()["detail"]
 
     def test_google_login_missing_email(self, client, monkeypatch):
         monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
@@ -340,7 +340,7 @@ class TestGoogleLoginEndpoint:
             response = client.post("/api/auth/google-login", json={"id_token": "token"})
 
         assert response.status_code == 400
-        assert "Email no encontrado" in response.json()["detail"]
+        assert "Email not found in Google token" in response.json()["detail"]
 
     def test_google_login_existing_blocked_user(self, client, db, monkeypatch):
         blocked = _create_user(

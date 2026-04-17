@@ -22,13 +22,13 @@ def send_email_html(
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="RESEND_API_KEY no configurada"
+            detail="RESEND_API_KEY is not configured"
         )
     
     if not resend:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Librería resend no instalada"
+            detail="resend library is not installed"
         )
     
     resend.api_key = api_key
@@ -40,7 +40,7 @@ def send_email_html(
             "to": to_email,
             "subject": subject,
             "html": html_body,
-            "text": text_fallback or "Tu cliente de correo no soporta HTML."
+            "text": text_fallback or "Your email client does not support HTML."
         })
         
         if r.get("id"):
@@ -49,13 +49,13 @@ def send_email_html(
             error_msg = r.get("message", "Error desconocido")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Error enviando email: {error_msg}"
+                detail=f"Error sending email: {error_msg}"
             )
     except Exception as e:
         print(f"[MAIL] Error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Error enviando email: {str(e)}"
+            detail=f"Error sending email: {str(e)}"
         )
 
 

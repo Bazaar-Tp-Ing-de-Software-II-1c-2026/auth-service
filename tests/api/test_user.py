@@ -17,7 +17,7 @@ class TestUserProfileEndpoints:
     def test_get_my_profile_requires_token(self, client):
         response = client.get("/api/users/me")
         assert response.status_code == 401
-        assert "Token faltante" in response.json()["detail"]
+        assert "Missing token" in response.json()["detail"]
 
     def test_update_my_profile_success(self, client, db, test_user):
         token = create_access_token({"sub": str(test_user.id)})
@@ -59,10 +59,10 @@ class TestUserProfileEndpoints:
         response = client.get(f"/api/users/{test_user.id}")
 
         assert response.status_code == 403
-        assert "no está disponible" in response.json()["detail"]
+        assert "not available" in response.json()["detail"]
 
     def test_get_public_profile_not_found(self, client):
         response = client.get("/api/users/999999")
 
         assert response.status_code == 404
-        assert "Usuario no encontrado" in response.json()["detail"]
+        assert "User not found" in response.json()["detail"]

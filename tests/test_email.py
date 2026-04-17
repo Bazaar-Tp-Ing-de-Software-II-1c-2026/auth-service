@@ -15,7 +15,7 @@ class TestSendEmailHtml:
                 )
 
         assert exc_info.value.status_code == 500
-        assert exc_info.value.detail == "RESEND_API_KEY no configurada"
+        assert exc_info.value.detail == "RESEND_API_KEY is not configured"
 
     def test_send_email_requires_resend_library(self):
         with patch("app.utils.email.settings.RESEND_API_KEY", "re_test_key"):
@@ -28,7 +28,7 @@ class TestSendEmailHtml:
                     )
 
         assert exc_info.value.status_code == 500
-        assert exc_info.value.detail == "Librería resend no instalada"
+        assert exc_info.value.detail == "resend library is not installed"
 
     def test_send_email_success_uses_default_sender_and_default_text(self):
         with patch("app.utils.email.settings.RESEND_API_KEY", "re_test_key"):
@@ -49,7 +49,7 @@ class TestSendEmailHtml:
                 "to": "recipient@example.com",
                 "subject": "Test Subject",
                 "html": "<h1>Test</h1>",
-                "text": "Tu cliente de correo no soporta HTML.",
+                "text": "Your email client does not support HTML.",
             }
         )
 
@@ -91,7 +91,7 @@ class TestSendEmailHtml:
                     )
 
         assert exc_info.value.status_code == 502
-        assert "Error enviando email:" in exc_info.value.detail
+        assert "Error sending email:" in exc_info.value.detail
 
     def test_send_email_fails_when_provider_raises_exception(self):
         with patch("app.utils.email.settings.RESEND_API_KEY", "re_test_key"):

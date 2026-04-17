@@ -36,7 +36,7 @@ def update_my_profile(
     except Exception as e:
         db.rollback()
         logger.error(f"[USER ROUTER] Error actualizando perfil user_id={current_user.id}: {e}")
-        raise ServiceException(status_code=500, title="Internal Server Error", detail="Error interno al procesar la actualización del perfil.")
+        raise ServiceException(status_code=500, title="Internal Server Error", detail="Internal error while processing profile update.")
 
 
 def get_user_public_profile_by_username(username: str, db: Session):
@@ -44,10 +44,10 @@ def get_user_public_profile_by_username(username: str, db: Session):
     user = users_repository.get_user_by_username(db, username)
 
     if not user:
-        raise ServiceException(status_code=404, title="Not Found", detail="Usuario no encontrado.")
+        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
 
     if user.blocked:
-        raise ServiceException(status_code=403, title="Forbidden", detail="Este perfil no está disponible.")
+        raise ServiceException(status_code=403, title="Forbidden", detail="This profile is not available.")
 
     return user
 
@@ -57,10 +57,10 @@ def get_user_public_profile_by_id(user_id: int, db: Session):
     user = users_repository.get_user_by_id(db, user_id)
 
     if not user:
-        raise ServiceException(status_code=404, title="Not Found", detail="Usuario no encontrado.")
+        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
 
     if user.blocked:
-        raise ServiceException(status_code=403, title="Forbidden", detail="Este perfil no está disponible.")
+        raise ServiceException(status_code=403, title="Forbidden", detail="This profile is not available.")
 
     return user
 
@@ -70,11 +70,11 @@ def generate_upload_url(content_type: str, current_user: models.User):
 
     content_type = unquote(content_type)
     if not content_type.startswith("image/"):
-        raise ServiceException(status_code=400, title="Bad Request", detail="Tipo de contenido inválido. Solo se aceptan imágenes.")
+        raise ServiceException(status_code=400, title="Bad Request", detail="Invalid content type. Only images are accepted.")
 
     if not settings.S3_BUCKET_NAME:
         logger.error("[USER ROUTER] S3_BUCKET_NAME no está configurado")
-        raise ServiceException(status_code=500, title="Internal Server Error", detail="Configuración de S3 incompleta.")
+        raise ServiceException(status_code=500, title="Internal Server Error", detail="Incomplete S3 configuration.")
 
     ext = content_type.split("/")[-1]
     filename = f"users/{current_user.id}/avatar.{ext}"
@@ -92,4 +92,4 @@ def generate_upload_url(content_type: str, current_user: models.User):
 
     except Exception as e:
         logger.error(f"[USER ROUTER] Error generando upload URL: user_id={current_user.id}, error={e}")
-        raise ServiceException(status_code=500, title="Internal Server Error", detail=f"Error generando URL presignada: {e}")
+        raise ServiceException(status_code=500, title="Internal Server Error", detail=f"Error generating presigned URL: {e}")
