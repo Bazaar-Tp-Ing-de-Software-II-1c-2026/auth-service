@@ -3,9 +3,7 @@ name: Deploy Auth Service to Amazon ECR and EC2
 on:
   push:
     branches: [ "main" ]
-    paths:
-      - 'auth-service/**' # Magia: Solo se ejecuta si cambiaste algo en la carpeta de auth
-
+   
 env:
   AWS_REGION: us-east-2
   ECR_REPOSITORY: auth-service
@@ -32,7 +30,6 @@ jobs:
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          cd auth-service
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
@@ -43,14 +40,10 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Entramos a ECR desde el servidor
             aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin 960154457182.dkr.ecr.us-east-2.amazonaws.com
             
-            # Asegurarnos de estar en la carpeta principal del servidor
             cd ~
             
-            # Descargamos la imagen fresca
             docker compose pull auth-service
             
-            # Levantamos el contenedor con los cambios
             docker compose up -d auth-service
