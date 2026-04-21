@@ -24,9 +24,11 @@ def update_my_profile(
     current_user: models.User,
 ) -> Any:
     logger.debug(f"[USER ROUTER] PATCH /me: user_id={current_user.id}")
-    update_data = payload.model_dump(exclude_unset=True, mode="json")
+    update_data = payload.model_dump(mode="json")
+    logger.debug(f"[USER ROUTER] Datos a actualizar: {update_data}")
 
     for key, value in update_data.items():
+        logger.debug(f"[USER ROUTER] Actualizando campo: {key}={value}")
         setattr(current_user, key, value)
 
     try:
