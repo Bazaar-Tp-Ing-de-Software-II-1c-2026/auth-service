@@ -1,7 +1,6 @@
 services:
   db-auth:
     image: postgres:15-alpine
-    container_name: auth-db
     environment:
       - POSTGRES_USER=user_auth
       - POSTGRES_PASSWORD=pass_auth
@@ -16,7 +15,6 @@ services:
 
   auth-service:
     build: .
-    container_name: auth-api
     ports:
       - "8000:8000"
     environment:
