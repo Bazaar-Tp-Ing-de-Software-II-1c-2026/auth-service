@@ -50,3 +50,22 @@ def generate_unique_username(db: Session, base: str) -> str:
         counter += 1
 
     return username
+
+
+def get_pin_device_by_device_id(db: Session, device_id: str):
+    return db.query(models.UserPinDevice).filter(models.UserPinDevice.device_id == device_id).first()
+
+
+def get_pin_device_for_user(db: Session, user_id: int, device_id: str):
+    return (
+        db.query(models.UserPinDevice)
+        .filter(models.UserPinDevice.user_id == user_id, models.UserPinDevice.device_id == device_id)
+        .first()
+    )
+
+
+def create_pin_device(db: Session, pin_device: models.UserPinDevice):
+    db.add(pin_device)
+    db.commit()
+    db.refresh(pin_device)
+    return pin_device

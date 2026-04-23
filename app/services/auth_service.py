@@ -17,6 +17,8 @@ from app.utils.email import send_reset_password_email, send_verification_email, 
 from app.utils.verification import generate_verification_code
 
 _RATE_LIMIT_SECONDS = 60
+_PIN_MAX_ATTEMPTS = 5
+_PIN_LOCK_MINUTES = 15
 
 
 def _get_google_userinfo_from_access_token(access_token: str) -> dict | None:
@@ -341,3 +343,131 @@ def reset_password(payload: schemas.ResetPassword, db: Session):
 
     logger.info(f"[AUTH ROUTER] Contraseña reseteada por token EXITOSAMENTE: user_id={user.id}")
     return {"message": "Password reset successfully. You can now log in with your new password."}
+
+
+def register_pin(payload: schemas.PinRegisterRequest, current_user: models.User, db: Session):
+    if current_user.blocked:
+        raise ServiceException(status_code=403, title="Forbidden", detail="Your account has been blocked.")
+
+    pin_device = auth_repository.get_pin_device_for_user(db, current_user.id, payload.device_id)
+    hashed_pin = security.hash_password(payload.pin)
+
+    if pin_device:
+        pin_device.hashed_pin = hashed_pin
+        pin_device.pin_length = len(payload.pin)
+        pin_device.device_name = payload.device_name
+        pin_device.platform = payload.platform
+        pin_device.pin_enabled = True
+        pin_device.failed_attempts = 0
+        pin_device.locked_until = None
+        pin_device.revoked_at = None
+        auth_repository.save(db, pin_device)
+        logger.info(f"[AUTH ROUTER] PIN actualizado: user_id={current_user.id}, device_id={payload.device_id}")
+        return {"message": "PIN registered successfully", "device_id": payload.device_id, "pin_enabled": True}
+
+    existing_device = auth_repository.get_pin_device_by_device_id(db, payload.device_id)
+    if existing_device and existing_device.user_id != current_user.id:
+        raise ServiceException(
+            status_code=409,
+            title="Conflict",
+            detail="Device is already registered with another account.",
+        )
+
+    new_pin_device = models.UserPinDevice(
+        user_id=current_user.id,
+        device_id=payload.device_id,
+        device_name=payload.device_name,
+        platform=payload.platform,
+        hashed_pin=hashed_pin,
+        pin_length=len(payload.pin),
+        pin_enabled=True,
+        failed_attempts=0,
+    )
+    auth_repository.create_pin_device(db, new_pin_device)
+    logger.info(f"[AUTH ROUTER] PIN registrado: user_id={current_user.id}, device_id={payload.device_id}")
+    return {"message": "PIN registered successfully", "device_id": payload.device_id, "pin_enabled": True}
+
+
+def login_with_pin(payload: schemas.PinLoginRequest, db: Session):
+    pin_device = auth_repository.get_pin_device_by_device_id(db, payload.device_id)
+    if not pin_device or pin_device.revoked_at is not None or not pin_device.pin_enabled:
+        raise ServiceException(status_code=404, title="Not Found", detail="PIN is not configured for this device.")
+
+    now = datetime.now(timezone.utc)
+    if pin_device.locked_until and pin_device.locked_until.replace(tzinfo=timezone.utc) > now:
+        raise ServiceException(
+            status_code=423,
+            title="Locked",
+            detail="PIN login is temporarily blocked. Please use email and password.",
+        )
+
+    user = auth_repository.get_user_by_id(db, pin_device.user_id)
+    if not user:
+        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
+
+    if user.blocked:
+        raise ServiceException(status_code=403, title="Forbidden", detail="Your account has been blocked.")
+
+    if not user.is_verified:
+        raise ServiceException(status_code=403, title="Forbidden", detail="Please verify your email before logging in.")
+
+    if not security.verify_password(payload.pin, pin_device.hashed_pin):
+        pin_device.failed_attempts = (pin_device.failed_attempts or 0) + 1
+
+        if pin_device.failed_attempts >= _PIN_MAX_ATTEMPTS:
+            pin_device.locked_until = datetime.now(timezone.utc) + timedelta(minutes=_PIN_LOCK_MINUTES)
+            auth_repository.save(db, pin_device)
+            raise ServiceException(
+                status_code=423,
+                title="Locked",
+                detail="PIN login is temporarily blocked. Please use email and password.",
+            )
+
+        auth_repository.save(db, pin_device)
+        remaining = _PIN_MAX_ATTEMPTS - pin_device.failed_attempts
+        raise ServiceException(
+            status_code=401,
+            title="Unauthorized",
+            detail=f"Invalid PIN. Remaining attempts: {remaining}.",
+        )
+
+    pin_device.failed_attempts = 0
+    pin_device.locked_until = None
+    pin_device.last_used_at = datetime.utcnow()
+    auth_repository.save(db, pin_device)
+
+    token = security.create_access_token({"sub": str(user.id), "email": user.email, "username": user.username})
+    logger.info(f"[AUTH ROUTER] Login PIN EXITOSO: user_id={user.id}, device_id={payload.device_id}")
+    return {"access_token": token, "token_type": "bearer"}
+
+
+def get_pin_status(device_id: str, current_user: models.User, db: Session):
+    pin_device = auth_repository.get_pin_device_for_user(db, current_user.id, device_id)
+    if not pin_device:
+        raise ServiceException(status_code=404, title="Not Found", detail="PIN configuration not found for this device.")
+
+    now = datetime.now(timezone.utc)
+    locked = bool(pin_device.locked_until and pin_device.locked_until.replace(tzinfo=timezone.utc) > now)
+    remaining_attempts = 0 if locked else max(0, _PIN_MAX_ATTEMPTS - (pin_device.failed_attempts or 0))
+
+    return {
+        "device_id": pin_device.device_id,
+        "pin_enabled": pin_device.pin_enabled,
+        "locked": locked,
+        "locked_until": pin_device.locked_until,
+        "remaining_attempts": remaining_attempts,
+    }
+
+
+def disable_pin(payload: schemas.PinDisableRequest, current_user: models.User, db: Session):
+    pin_device = auth_repository.get_pin_device_for_user(db, current_user.id, payload.device_id)
+    if not pin_device:
+        raise ServiceException(status_code=404, title="Not Found", detail="PIN configuration not found for this device.")
+
+    pin_device.pin_enabled = False
+    pin_device.revoked_at = datetime.utcnow()
+    pin_device.failed_attempts = 0
+    pin_device.locked_until = None
+    auth_repository.save(db, pin_device)
+    logger.info(f"[AUTH ROUTER] PIN desactivado: user_id={current_user.id}, device_id={payload.device_id}")
+    return {"message": "PIN disabled successfully", "device_id": payload.device_id, "pin_enabled": False}

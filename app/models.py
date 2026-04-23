@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, Column, Integer, String, DateTime, Text
+from sqlalchemy import Boolean, Column, Integer, String, DateTime, ForeignKey
 from datetime import datetime
 from .database import Base
 
@@ -22,4 +22,23 @@ class User(Base):
     last_verification_email_request = Column(DateTime, nullable=True)
     profile_picture_url = Column(String, nullable=True)
     description = Column(String(500), nullable=True, default="")
+
+
+class UserPinDevice(Base):
+    __tablename__ = "user_pin_devices"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    device_id = Column(String(128), nullable=False, unique=True, index=True)
+    device_name = Column(String(128), nullable=True)
+    platform = Column(String(32), nullable=True)
+    hashed_pin = Column(String, nullable=False)
+    pin_length = Column(Integer, nullable=False, default=6)
+    pin_enabled = Column(Boolean, nullable=False, default=True)
+    failed_attempts = Column(Integer, nullable=False, default=0)
+    locked_until = Column(DateTime, nullable=True)
+    last_used_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    revoked_at = Column(DateTime, nullable=True)
 

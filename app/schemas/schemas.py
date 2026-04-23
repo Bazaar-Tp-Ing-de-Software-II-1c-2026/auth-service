@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, HttpUrl, StringConstraints
 from pydantic_core import PydanticCustomError
 from typing import Optional, Annotated
+from datetime import datetime
 import re
 
 
@@ -136,6 +137,50 @@ class ResetPassword(BaseModel):
     @classmethod
     def password_validator(cls, v: str) -> str:
         return _validate_password_strength(v)
+
+
+class PinRegisterRequest(BaseModel):
+    device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
+    pin: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=12)]
+    device_name: Optional[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]] = None
+    platform: Optional[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=32)]] = None
+
+    @field_validator("pin")
+    @classmethod
+    def pin_must_be_numeric(cls, v: str) -> str:
+        if not v.isdigit():
+            raise ValueError("PIN must contain digits only")
+        return v
+
+
+class PinLoginRequest(BaseModel):
+    device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
+    pin: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=12)]
+
+    @field_validator("pin")
+    @classmethod
+    def pin_must_be_numeric(cls, v: str) -> str:
+        if not v.isdigit():
+            raise ValueError("PIN must contain digits only")
+        return v
+
+
+class PinDisableRequest(BaseModel):
+    device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
+
+
+class PinRegisterResponse(BaseModel):
+    message: str
+    device_id: str
+    pin_enabled: bool
+
+
+class PinStatusResponse(BaseModel):
+    device_id: str
+    pin_enabled: bool
+    locked: bool
+    locked_until: Optional[datetime] = None
+    remaining_attempts: int
 
 
 # -------------------------

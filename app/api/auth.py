@@ -8,7 +8,7 @@ from app import models, schemas
 from app.api.dependencies import get_current_user
 from app.database import get_db
 from app.services import auth_service
-from app.schemas.schemas import UserCreate, UserLogin, Token, UserOut, GoogleLoginRequest, ResendVerificationEmailRequest, VerifyCodeRequest, ForgotPasswordRequest, ResetPasswordWithCodeRequest, ResetPassword
+from app.schemas.schemas import UserCreate, UserLogin, Token, UserOut, GoogleLoginRequest, ResendVerificationEmailRequest, VerifyCodeRequest, ForgotPasswordRequest, ResetPasswordWithCodeRequest, ResetPassword, PinRegisterRequest, PinLoginRequest, PinDisableRequest, PinRegisterResponse, PinStatusResponse
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -61,3 +61,35 @@ def reset_password_with_code(payload: ResetPasswordWithCodeRequest, db: Session 
 @router.post("/reset-password", response_model=dict)
 def reset_password(payload: ResetPassword, db: Session = Depends(get_db)):
     return auth_service.reset_password(payload, db)
+
+
+@router.post("/pin/register", response_model=PinRegisterResponse)
+def register_pin(
+    payload: PinRegisterRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    return auth_service.register_pin(payload, current_user, db)
+
+
+@router.post("/pin/login", response_model=Token)
+def login_with_pin(payload: PinLoginRequest, db: Session = Depends(get_db)):
+    return auth_service.login_with_pin(payload, db)
+
+
+@router.get("/pin/status", response_model=PinStatusResponse)
+def pin_status(
+    device_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    return auth_service.get_pin_status(device_id, current_user, db)
+
+
+@router.post("/pin/disable", response_model=PinRegisterResponse)
+def disable_pin(
+    payload: PinDisableRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
+):
+    return auth_service.disable_pin(payload, current_user, db)
