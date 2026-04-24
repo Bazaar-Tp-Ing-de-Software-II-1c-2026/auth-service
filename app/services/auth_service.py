@@ -355,8 +355,6 @@ def register_pin(payload: schemas.PinRegisterRequest, current_user: models.User,
     if pin_device:
         pin_device.hashed_pin = hashed_pin
         pin_device.pin_length = len(payload.pin)
-        pin_device.device_name = payload.device_name
-        pin_device.platform = payload.platform
         pin_device.pin_enabled = True
         pin_device.failed_attempts = 0
         pin_device.locked_until = None
@@ -376,8 +374,6 @@ def register_pin(payload: schemas.PinRegisterRequest, current_user: models.User,
     new_pin_device = models.UserPinDevice(
         user_id=current_user.id,
         device_id=payload.device_id,
-        device_name=payload.device_name,
-        platform=payload.platform,
         hashed_pin=hashed_pin,
         pin_length=len(payload.pin),
         pin_enabled=True,

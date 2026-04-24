@@ -12,8 +12,6 @@ class TestPinAuthEndpoints:
             json={
                 "device_id": "device-123",
                 "pin": "123456",
-                "device_name": "Julian Phone",
-                "platform": "android",
             },
         )
 

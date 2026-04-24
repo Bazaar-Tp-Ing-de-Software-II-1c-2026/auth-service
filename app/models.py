@@ -30,8 +30,6 @@ class UserPinDevice(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     device_id = Column(String(128), nullable=False, unique=True, index=True)
-    device_name = Column(String(128), nullable=True)
-    platform = Column(String(32), nullable=True)
     hashed_pin = Column(String, nullable=False)
     pin_length = Column(Integer, nullable=False, default=6)
     pin_enabled = Column(Boolean, nullable=False, default=True)

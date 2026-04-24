@@ -142,8 +142,6 @@ class ResetPassword(BaseModel):
 class PinRegisterRequest(BaseModel):
     device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]
     pin: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=12)]
-    device_name: Optional[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=128)]] = None
-    platform: Optional[Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=32)]] = None
 
     @field_validator("pin")
     @classmethod
