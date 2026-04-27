@@ -127,7 +127,7 @@ def get_verification_email_html(username: str, verification_code: str) -> str:
       </div>
       
       <div class="expiration">
-        ⏱️ Este código expira en 24 horas
+        ⏱️ Este código expira en 1 hora
       </div>
       
       <div class="security-note">
@@ -268,7 +268,7 @@ def get_reset_password_email_html(username: str, reset_code: str) -> str:
       </div>
       
       <div class="expiration">
-        ⏱️ Este código expira en 24 horas
+        ⏱️ Este código expira en 1 hora
       </div>
       
       <div class="security-note">
