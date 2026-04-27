@@ -55,7 +55,7 @@ def _check_rate_limit(last_request: datetime | None, context: str) -> None:
 def _send_verification_email(user: models.User, db: Session) -> None:
     verification_code = generate_verification_code(length=8)
     user.verification_code = verification_code
-    user.verification_code_expires = datetime.now(timezone.utc) + timedelta(hours=24)
+    user.verification_code_expires = datetime.now(timezone.utc) + timedelta(hours=1)
     auth_repository.save(db, user)
     send_verification_email(
         to_email=user.email,
@@ -272,7 +272,7 @@ def request_reset_password(payload: schemas.ForgotPasswordRequest, db: Session):
 
         reset_code = generate_verification_code(length=8)
         user.verification_code = reset_code
-        user.verification_code_expires = datetime.now(timezone.utc) + timedelta(hours=24)
+        user.verification_code_expires = datetime.now(timezone.utc) + timedelta(hours=1)
         user.last_password_reset_request = datetime.now(timezone.utc)
         auth_repository.save(db, user)
 
