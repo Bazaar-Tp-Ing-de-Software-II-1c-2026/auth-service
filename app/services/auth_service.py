@@ -79,6 +79,9 @@ def register(payload: schemas.UserCreate, db: Session):
     if auth_repository.get_user_by_email(db, payload.email):
         raise ServiceException(status_code=400, title="Bad Request", detail="Email is already registered.")
 
+    # Skip email verification in development mode
+    is_verified = settings.SKIP_EMAIL_VERIFICATION
+    
     user = models.User(
         email=payload.email,
         username=payload.username,
@@ -86,11 +89,15 @@ def register(payload: schemas.UserCreate, db: Session):
         first_name=payload.first_name,
         last_name=payload.last_name,
         role="user",
+        is_verified=is_verified,
     )
 
     try:
         auth_repository.create_user(db, user)
-        _send_verification_email(user, db)
+        if not settings.SKIP_EMAIL_VERIFICATION:
+            _send_verification_email(user, db)
+        else:
+            logger.info(f"[AUTH ROUTER] Email verification skipped (development mode): {user.email}")
         db.commit()
     except Exception:
         db.rollback()
@@ -116,7 +123,8 @@ def login(payload: schemas.UserLogin, db: Session):
     if user.blocked:
         raise ServiceException(status_code=403, title="Forbidden", detail="Your account has been blocked.")
 
-    if not user.is_verified:
+    # Skip email verification check in development mode
+    if not settings.SKIP_EMAIL_VERIFICATION and not user.is_verified:
         raise ServiceException(status_code=403, title="Forbidden", detail="Please verify your email before logging in.")
 
     if not security.verify_password(payload.password, user.hashed_password):

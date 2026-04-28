@@ -20,6 +20,9 @@ class Settings(BaseSettings):
 
     EMAIL_FROM: str = ""
     RESEND_API_KEY: str = ""
+    
+    # Skip email verification in development mode
+    SKIP_EMAIL_VERIFICATION: bool = False
 
     model_config = ConfigDict(extra="ignore")
 
