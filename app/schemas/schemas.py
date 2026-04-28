@@ -148,6 +148,12 @@ class UserBase(BaseModel):
     last_name: Optional[str] = None
     description: Optional[str] = None
     profile_picture_url: Optional[str] = None
+    shipping_address: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_state: Optional[str] = None
+    shipping_postal_code: Optional[str] = None
+    shipping_country: Optional[str] = None
+    shipping_phone: Optional[str] = None
 
 
 class UserOut(UserBase):
@@ -169,6 +175,12 @@ class UserUpdate(BaseModel):
     last_name: Optional[str] = None
     description: Optional[str] = None
     profile_picture_url: Optional[HttpUrl] = None
+    shipping_address: Optional[str] = None
+    shipping_city: Optional[str] = None
+    shipping_state: Optional[str] = None
+    shipping_postal_code: Optional[str] = None
+    shipping_country: Optional[str] = None
+    shipping_phone: Optional[str] = None
 
     @field_validator("first_name", "last_name")
     @classmethod
@@ -190,4 +202,34 @@ class UserUpdate(BaseModel):
         normalized = v.strip()
         if len(normalized) > 280:
             raise ValueError("Description cannot exceed 280 characters")
+        return normalized or None
+    
+    @field_validator("shipping_address", "shipping_city", "shipping_state", "shipping_country")
+    @classmethod
+    def validate_address_fields(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip()
+        if len(normalized) > 200:
+            raise ValueError("Address field cannot exceed 200 characters")
+        return normalized or None
+    
+    @field_validator("shipping_postal_code")
+    @classmethod
+    def validate_postal_code(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip()
+        if len(normalized) > 20:
+            raise ValueError("Postal code cannot exceed 20 characters")
+        return normalized or None
+    
+    @field_validator("shipping_phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        normalized = v.strip()
+        if len(normalized) > 20:
+            raise ValueError("Phone number cannot exceed 20 characters")
         return normalized or None
