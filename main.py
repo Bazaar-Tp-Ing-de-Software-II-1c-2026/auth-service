@@ -8,7 +8,7 @@ from loguru import logger
 
 from app.database import engine, SessionLocal
 from app import models
-from app.api import auth, user
+from app.api import auth, user, addresses
 from app.middleware.error_handler import ErrorHandlerMiddleware
 from app.exceptions.handler import ServiceException, problem_details_handler
 from app.logger import setup_logger
@@ -80,6 +80,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 app.include_router(auth.router)
 app.include_router(user.router)
+app.include_router(addresses.router)
 
 
 @app.get("/livez", tags=["health"])
