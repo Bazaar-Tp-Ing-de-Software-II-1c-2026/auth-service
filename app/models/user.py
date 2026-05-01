@@ -30,5 +30,12 @@ class User(Base):
     shipping_postal_code = Column(String(20), nullable=True)
     shipping_country = Column(String(100), nullable=True)
     shipping_phone = Column(String(20), nullable=True)
+    
+    # PIN authentication fields
+    pin_hash = Column(String(255), nullable=True)
+    pin_device_id = Column(String(255), nullable=True, index=True)
+    pin_failed_attempts = Column(Integer, default=0, nullable=False)
+    pin_locked_until = Column(DateTime, nullable=True)
+    pin_created_at = Column(DateTime, nullable=True)
 
 
