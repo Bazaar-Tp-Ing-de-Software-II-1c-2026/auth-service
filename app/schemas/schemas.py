@@ -233,3 +233,57 @@ class UserUpdate(BaseModel):
         if len(normalized) > 20:
             raise ValueError("Phone number cannot exceed 20 characters")
         return normalized or None
+
+
+# -------------------------
+# PIN AUTHENTICATION
+# -------------------------
+
+class PINSetupRequest(BaseModel):
+    pin: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=8)]
+    device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+    @field_validator("pin")
+    @classmethod
+    def validate_pin(cls, v: str) -> str:
+        if not v.isdigit():
+            raise PydanticCustomError(
+                "pin_not_numeric",
+                "PIN must contain only numbers",
+            )
+        if len(v) < 6:
+            raise PydanticCustomError(
+                "pin_too_short",
+                "PIN must be at least 6 digits",
+            )
+        if len(v) > 8:
+            raise PydanticCustomError(
+                "pin_too_long",
+                "PIN cannot exceed 8 digits",
+            )
+        return v
+
+
+class PINLoginRequest(BaseModel):
+    pin: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=8)]
+    device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+    @field_validator("pin")
+    @classmethod
+    def validate_pin(cls, v: str) -> str:
+        if not v.isdigit():
+            raise PydanticCustomError(
+                "pin_not_numeric",
+                "PIN must contain only numbers",
+            )
+        return v
+
+
+class PINStatusResponse(BaseModel):
+    has_pin: bool
+    device_id: Optional[str] = None
+    pin_created_at: Optional[str] = None
+
+
+class PINRemoveRequest(BaseModel):
+    device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
