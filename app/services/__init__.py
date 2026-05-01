@@ -1,1 +1,1 @@
-from . import auth_service
+from . import auth_service, pin_service
