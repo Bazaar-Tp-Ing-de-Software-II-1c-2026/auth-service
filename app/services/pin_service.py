@@ -194,4 +194,4 @@ def remove_pin(user_id: int, payload: schemas.PINRemoveRequest, db: Session) -> 
     logger.info(f"[PIN SERVICE] PIN removed successfully for user_id={user_id}")
     return {"message": "PIN removed successfully"}
 
-# Made with Bob
+

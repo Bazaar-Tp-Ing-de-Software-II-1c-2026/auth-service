@@ -79,4 +79,4 @@ def remove_pin(
     logger.info(f"[PIN API] Remove PIN request from user_id={current_user.id}")
     return pin_service.remove_pin(current_user.id, payload, db)
 
-# Made with Bob
+

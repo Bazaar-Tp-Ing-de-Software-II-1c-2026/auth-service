@@ -13,4 +13,4 @@ ADD COLUMN IF NOT EXISTS shipping_phone VARCHAR(20);
 CREATE INDEX IF NOT EXISTS idx_users_shipping_country ON users(shipping_country);
 CREATE INDEX IF NOT EXISTS idx_users_shipping_city ON users(shipping_city);
 
--- Made with Bob
+
