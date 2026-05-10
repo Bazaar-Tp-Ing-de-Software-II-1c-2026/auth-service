@@ -25,4 +25,4 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_user_addresses_unique_default
 ON user_addresses(user_id) 
 WHERE is_default = TRUE;
 
--- Made with Bob
+

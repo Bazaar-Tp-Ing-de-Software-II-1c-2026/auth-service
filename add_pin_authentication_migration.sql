@@ -18,4 +18,4 @@ COMMENT ON COLUMN users.pin_failed_attempts IS 'Counter for failed PIN attempts'
 COMMENT ON COLUMN users.pin_locked_until IS 'Timestamp until PIN authentication is locked';
 COMMENT ON COLUMN users.pin_created_at IS 'When the PIN was configured';
 
--- Made with Bob
+
