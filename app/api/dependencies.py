@@ -12,7 +12,6 @@ def get_current_user(
     authorization: str | None = Header(default=None),
     db: Session = Depends(get_db),
 ) -> models.User:
-    logger.debug("[AUTH] Validando token de autorización")
 
     if not authorization or not authorization.lower().startswith("bearer "):
         raise ServiceException(status_code=401, title="Unauthorized", detail="Missing token")
@@ -31,7 +30,6 @@ def get_current_user(
     if not user:
         raise ServiceException(status_code=404, title="Not Found", detail="User not found")
 
-    logger.debug(f"[AUTH] Usuario autenticado: id={user.id}, username={user.username}")
     return user
 
 
