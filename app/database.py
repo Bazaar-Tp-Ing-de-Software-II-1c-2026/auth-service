@@ -10,7 +10,6 @@ Base = declarative_base()
 
 def get_db():
     db = SessionLocal()
-    logger.debug("[DATABASE] Nueva sesión de DB creada")
     try:
         yield db
     except Exception as e:
@@ -18,4 +17,3 @@ def get_db():
         raise
     finally:
         db.close()
-        logger.debug("[DATABASE] Sesión de DB cerrada")
