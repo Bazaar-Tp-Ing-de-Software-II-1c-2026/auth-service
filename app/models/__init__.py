@@ -3,8 +3,8 @@
 from ..database import Base
 from .user import User
 from .address import UserAddress
-from .push_token import PushToken
+from .device_token import DeviceToken
 
-__all__ = ["Base", "User", "UserAddress", "PushToken"]
 
+__all__ = ["Base", "User", "UserAddress", "DeviceToken"]
 
