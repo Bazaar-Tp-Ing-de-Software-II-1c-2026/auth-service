@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.api.dependencies import get_current_user
 from app.database import get_db
+from loguru import logger
 
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
@@ -13,6 +14,7 @@ def create_notification(
     payload: schemas.NotificationCreateRequest,
     db: Session = Depends(get_db),
 ):
+    logger.info(f"Creando notificación para usuario_id={payload.user_id} con tipo={payload.notification_type}")
     notification = models.Notification(
         user_id=payload.user_id,
         notification_type=payload.notification_type,
@@ -40,6 +42,8 @@ def get_my_notifications(
         .order_by(models.Notification.created_at.desc())
         .all()
     )
+
+    logger.info(f"Recuperando notificaciones para user_id={current_user.id}, total={len(notifications)}")
 
     return {
         "data": notifications,
