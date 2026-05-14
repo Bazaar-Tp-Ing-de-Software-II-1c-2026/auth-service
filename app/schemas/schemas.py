@@ -1,6 +1,8 @@
+from datetime import datetime
+from typing import Any, Optional, Annotated
+
 from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, HttpUrl, StringConstraints
 from pydantic_core import PydanticCustomError
-from typing import Optional, Annotated
 import re
 
 
@@ -233,6 +235,39 @@ class UserUpdate(BaseModel):
         if len(normalized) > 20:
             raise ValueError("Phone number cannot exceed 20 characters")
         return normalized or None
+
+
+# -------------------------
+# NOTIFICATIONS
+# -------------------------
+
+class NotificationCreateRequest(BaseModel):
+    user_id: int
+    notification_type: str
+    title: str
+    body: str
+    data: dict[str, Any] | None = None
+    source: str = "product-service"
+
+
+class NotificationResponse(BaseModel):
+    id: int
+    user_id: int
+    notification_type: str
+    title: str
+    body: str
+    data: dict[str, Any] | None = None
+    source: str
+    is_read: bool
+    read_at: datetime | None = None
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class NotificationListResponse(BaseModel):
+    data: list[NotificationResponse]
+    total: int
 
 
 # -------------------------

@@ -25,6 +25,9 @@ uvicorn main:app --reload
 sudo docker compose up --build
 ```
 
+Al iniciar el contenedor, `auth-service` ejecuta automáticamente `alembic upgrade head` antes de levantar FastAPI.
+Eso permite aplicar migraciones sin borrar la base de datos.
+
 ## Ejecutar los tests con docker:
 ```bash
 sudo docker compose -f compose.test.yaml up --abort-on-container-exit --exit-code-from auth-tests
