@@ -12,7 +12,7 @@ from app.config import settings
 from app.exceptions.handler import ServiceException
 from app.repositories import users as users_repository
 from app.services.storage import get_s3_client
-from app.repositories.users import count_total_users, count_users_in_period, get_users_timeline
+from app.repositories.users import count_total_users, get_users_timeline, get_users_paginated
 
 
 def get_my_profile(current_user: models.User) -> models.User:
@@ -114,4 +114,28 @@ def get_user_metrics(db: Session, start_date: date, end_date: date):
         "totalUsers": total_users,
         "usersInPeriod": users_in_period,
         "timeline": formatted_timeline,
+    }
+
+
+def list_users_admin(db: Session, page: int, limit: int, search: str | None = None):
+    users, total = get_users_paginated(db, page, limit, search)
+
+    data = []
+    for user in users:
+        full_name = f"{user.first_name or ''} {user.last_name or ''}".strip()
+        data.append(
+            {
+                "id": user.id,
+                "name": full_name or user.username,
+                "email": user.email,
+                "created_at": user.created_at,
+                "status": "bloqueado" if user.blocked else "activo",
+            }
+        )
+
+    return {
+        "data": data,
+        "total": total,
+        "page": page,
+        "limit": limit,
     }
