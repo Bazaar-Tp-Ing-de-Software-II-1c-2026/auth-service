@@ -1,4 +1,5 @@
 from sqlalchemy import Boolean, Column, Integer, String, DateTime, Text
+from sqlalchemy.sql import func
 from datetime import datetime
 from ..database import Base
 
@@ -37,5 +38,6 @@ class User(Base):
     pin_failed_attempts = Column(Integer, default=0, nullable=False)
     pin_locked_until = Column(DateTime, nullable=True)
     pin_created_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
 
 
