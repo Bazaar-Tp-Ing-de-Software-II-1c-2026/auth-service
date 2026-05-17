@@ -14,15 +14,17 @@ class ErrorHandlerMiddleware(BaseHTTPMiddleware):
         except RequestValidationError as exc:
             errors = exc.errors()
             error_messages = []
-            
+
             for error in errors:
                 field = error.get("loc", [])[-1] if error.get("loc") else "unknown"
                 msg = error.get("msg", "Invalid data")
 
                 error_messages.append(msg)
-            
-            detail = " | ".join(error_messages) if error_messages else "Invalid request data"
-            
+
+            detail = (
+                " | ".join(error_messages) if error_messages else "Invalid request data"
+            )
+
             return JSONResponse(
                 status_code=400,
                 content={

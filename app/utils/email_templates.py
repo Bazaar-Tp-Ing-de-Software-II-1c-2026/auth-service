@@ -2,8 +2,8 @@
 Templates de email personalizados para Bazaar
 """
 
-BAZAAR_PRIMARY_COLOR = '#E6A500'
-BAZAAR_LOGO_URL = 'https://bazaar-app-bucket.s3.amazonaws.com/logo.png'  
+BAZAAR_PRIMARY_COLOR = "#E6A500"
+BAZAAR_LOGO_URL = "https://bazaar-app-bucket.s3.amazonaws.com/logo.png"
 
 
 def get_verification_email_html(username: str, verification_code: str) -> str:

@@ -51,7 +51,9 @@ class TestUserExtraEndpoints:
         monkeypatch.setattr(users_service.settings, "S3_BUCKET_NAME", "my-bucket")
 
         with patch("app.services.users.get_s3_client") as mock_get_s3_client:
-            mock_get_s3_client.return_value.generate_presigned_url.return_value = "https://signed.example.com"
+            mock_get_s3_client.return_value.generate_presigned_url.return_value = (
+                "https://signed.example.com"
+            )
             response = client.post(
                 "/api/users/me/upload-url?content_type=image/jpeg",
                 headers=headers,
@@ -68,7 +70,9 @@ class TestUserExtraEndpoints:
         monkeypatch.setattr(users_service.settings, "S3_BUCKET_NAME", "my-bucket")
 
         with patch("app.services.users.get_s3_client") as mock_get_s3_client:
-            mock_get_s3_client.return_value.generate_presigned_url.side_effect = RuntimeError("s3 boom")
+            mock_get_s3_client.return_value.generate_presigned_url.side_effect = (
+                RuntimeError("s3 boom")
+            )
             response = client.post(
                 "/api/users/me/upload-url?content_type=image/jpeg",
                 headers=headers,

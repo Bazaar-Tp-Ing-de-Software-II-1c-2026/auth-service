@@ -5,9 +5,10 @@ from app.security import create_access_token
 
 class TestRegisterEndpoint:
     def test_register_success(self, client, valid_user_data):
-        with patch("app.services.auth_service.send_verification_email") as mock_send_email:
+        with patch(
+            "app.services.auth_service.send_verification_email"
+        ) as mock_send_email:
             response = client.post("/api/auth/register", json=valid_user_data)
-
 
         assert response.status_code == 201
         data = response.json()
@@ -31,17 +32,16 @@ class TestRegisterEndpoint:
         assert response.status_code == 400
 
     def test_register_missing_field(self, client):
-        invalid_data = {
-            "email": "test@example.com",
-            "username": "testuser"
-        }
+        invalid_data = {"email": "test@example.com", "username": "testuser"}
         response = client.post("/api/auth/register", json=invalid_data)
         assert response.status_code == 400
         body = response.json()
         assert body["title"] == "Invalid request parameters"
         assert body["invalid-params"][0]["reason"] == "Field required"
 
-    def test_register_empty_last_name_returns_validation_error(self, client, valid_user_data):
+    def test_register_empty_last_name_returns_validation_error(
+        self, client, valid_user_data
+    ):
         valid_user_data["last_name"] = ""
 
         response = client.post("/api/auth/register", json=valid_user_data)
@@ -52,7 +52,9 @@ class TestRegisterEndpoint:
         reasons = {param["name"]: param["reason"] for param in body["invalid-params"]}
         assert reasons["last_name"] == "String should have at least 1 character"
 
-    def test_register_weak_password_returns_english_validation_error(self, client, valid_user_data):
+    def test_register_weak_password_returns_english_validation_error(
+        self, client, valid_user_data
+    ):
         valid_user_data["password"] = "short1A"
 
         response = client.post("/api/auth/register", json=valid_user_data)
@@ -67,8 +69,9 @@ class TestRegisterEndpoint:
             response = client.post("/api/auth/register", json=valid_user_data)
 
         assert response.status_code == 201
-        
+
         from app.models import User
+
         user = db.query(User).filter(User.email == valid_user_data["email"]).first()
         assert user is not None
         assert user.username == valid_user_data["username"]
@@ -79,7 +82,7 @@ class TestLoginEndpoint:
     def test_login_with_email_success(self, client, test_user):
         response = client.post(
             "/api/auth/login",
-            json={"identifier": test_user.email, "password": "password123"}
+            json={"identifier": test_user.email, "password": "password123"},
         )
         assert response.status_code == 200
         data = response.json()
@@ -89,7 +92,7 @@ class TestLoginEndpoint:
     def test_login_with_username_success(self, client, test_user):
         response = client.post(
             "/api/auth/login",
-            json={"identifier": test_user.username, "password": "password123"}
+            json={"identifier": test_user.username, "password": "password123"},
         )
         assert response.status_code == 200
         data = response.json()
@@ -99,15 +102,14 @@ class TestLoginEndpoint:
     def test_login_wrong_password(self, client, test_user):
         response = client.post(
             "/api/auth/login",
-            json={"identifier": test_user.email, "password": "wrongpassword"}
+            json={"identifier": test_user.email, "password": "wrongpassword"},
         )
         assert response.status_code == 401
         assert "Invalid username or password" in response.json()["detail"]
 
     def test_login_empty_payload_returns_validation_error(self, client):
         response = client.post(
-            "/api/auth/login",
-            json={"identifier": "", "password": ""}
+            "/api/auth/login", json={"identifier": "", "password": ""}
         )
 
         assert response.status_code == 400
@@ -121,7 +123,7 @@ class TestLoginEndpoint:
     def test_login_user_not_found(self, client):
         response = client.post(
             "/api/auth/login",
-            json={"identifier": "nonexistent@example.com", "password": "password123"}
+            json={"identifier": "nonexistent@example.com", "password": "password123"},
         )
         assert response.status_code == 404
         assert "User not found" in response.json()["detail"]
@@ -129,10 +131,10 @@ class TestLoginEndpoint:
     def test_login_user_blocked(self, client, db, test_user):
         test_user.blocked = True
         db.commit()
-        
+
         response = client.post(
             "/api/auth/login",
-            json={"identifier": test_user.email, "password": "password123"}
+            json={"identifier": test_user.email, "password": "password123"},
         )
         assert response.status_code == 403
         assert "Your account has been blocked" in response.json()["detail"]
@@ -156,22 +158,18 @@ class TestLoginEndpoint:
 
         response = client.post(
             "/api/auth/login",
-            json={"identifier": user.email, "password": "password123"}
+            json={"identifier": user.email, "password": "password123"},
         )
         assert response.status_code == 403
         assert "Please verify your email before logging in" in response.json()["detail"]
 
     def test_login_missing_identifier(self, client):
-        response = client.post(
-            "/api/auth/login",
-            json={"password": "password123"}
-        )
+        response = client.post("/api/auth/login", json={"password": "password123"})
         assert response.status_code == 400
 
     def test_login_missing_password(self, client):
         response = client.post(
-            "/api/auth/login",
-            json={"identifier": "test@example.com"}
+            "/api/auth/login", json={"identifier": "test@example.com"}
         )
         assert response.status_code == 400
         body = response.json()
@@ -237,7 +235,9 @@ class TestVerifyEmailEndpoint:
         db.refresh(user)
         user_id = user.id
 
-        token = create_access_token({"sub": str(user_id), "scope": "email-verification"})
+        token = create_access_token(
+            {"sub": str(user_id), "scope": "email-verification"}
+        )
         response = client.get(f"/api/auth/verify-email?token={token}")
 
         assert response.status_code == 200
@@ -253,13 +253,17 @@ class TestVerifyEmailEndpoint:
         assert "Invalid or expired verification token" in response.json()["detail"]
 
     def test_verify_email_wrong_scope(self, client, test_user):
-        token = create_access_token({"sub": str(test_user.id), "scope": "password-reset"})
+        token = create_access_token(
+            {"sub": str(test_user.id), "scope": "password-reset"}
+        )
         response = client.get(f"/api/auth/verify-email?token={token}")
         assert response.status_code == 401
         assert "Invalid or expired verification token" in response.json()["detail"]
 
     def test_verify_email_already_verified(self, client, test_user):
-        token = create_access_token({"sub": str(test_user.id), "scope": "email-verification"})
+        token = create_access_token(
+            {"sub": str(test_user.id), "scope": "email-verification"}
+        )
         response = client.get(f"/api/auth/verify-email?token={token}")
         assert response.status_code == 200
         assert "The email is already verified" in response.json()["message"]
@@ -283,36 +287,51 @@ class TestResendVerificationEmailEndpoint:
         db.add(user)
         db.commit()
 
-        with patch("app.services.auth_service.send_verification_email") as mock_send_email:
+        with patch(
+            "app.services.auth_service.send_verification_email"
+        ) as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": user.email},
             )
 
         assert response.status_code == 200
-        assert "If an account exists with that email and is not verified, a new code has been sent." in response.json()["message"]
+        assert (
+            "If an account exists with that email and is not verified, a new code has been sent."
+            in response.json()["message"]
+        )
         mock_send_email.assert_called_once()
 
     def test_resend_verification_email_verified_user(self, client, test_user):
-        with patch("app.services.auth_service.send_verification_email") as mock_send_email:
+        with patch(
+            "app.services.auth_service.send_verification_email"
+        ) as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": test_user.email},
             )
 
         assert response.status_code == 200
-        assert "If an account exists with that email and is not verified, a new code has been sent." in response.json()["message"]
+        assert (
+            "If an account exists with that email and is not verified, a new code has been sent."
+            in response.json()["message"]
+        )
         mock_send_email.assert_not_called()
 
     def test_resend_verification_email_user_not_found(self, client):
-        with patch("app.services.auth_service.send_verification_email") as mock_send_email:
+        with patch(
+            "app.services.auth_service.send_verification_email"
+        ) as mock_send_email:
             response = client.post(
                 "/api/auth/resend-verification-email",
                 json={"email": "missing@example.com"},
             )
 
         assert response.status_code == 200
-        assert "If an account exists with that email and is not verified, a new code has been sent." in response.json()["message"]
+        assert (
+            "If an account exists with that email and is not verified, a new code has been sent."
+            in response.json()["message"]
+        )
         mock_send_email.assert_not_called()
 
     def test_resend_verification_email_invalid_email(self, client):
