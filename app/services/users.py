@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 from urllib.parse import unquote
+from datetime import date
 
 from loguru import logger
 from sqlalchemy.orm import Session
@@ -11,6 +12,7 @@ from app.config import settings
 from app.exceptions.handler import ServiceException
 from app.repositories import users as users_repository
 from app.services.storage import get_s3_client
+from app.repositories.users import count_total_users, count_users_in_period, get_users_timeline
 
 
 def get_my_profile(current_user: models.User) -> models.User:
@@ -95,3 +97,21 @@ def generate_upload_url(content_type: str, current_user: models.User):
     except Exception as e:
         logger.error(f"[USER ROUTER] Error generando upload URL: user_id={current_user.id}, error={e}")
         raise ServiceException(status_code=500, title="Internal Server Error", detail=f"Error generating presigned URL: {e}")
+
+
+def get_user_metrics(db: Session, start_date: date, end_date: date):
+    total_users = count_total_users(db)
+    timeline = get_users_timeline(db, start_date, end_date)
+
+    users_in_period = 0
+    formatted_timeline = []
+
+    for entry in timeline:
+        users_in_period += entry.count
+        formatted_timeline.append({"date": str(entry.date), "count": entry.count})
+
+    return {
+        "totalUsers": total_users,
+        "usersInPeriod": users_in_period,
+        "timeline": formatted_timeline,
+    }
