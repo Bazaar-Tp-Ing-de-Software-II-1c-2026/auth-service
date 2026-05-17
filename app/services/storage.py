@@ -11,6 +11,6 @@ from app.config import settings
 def get_s3_client():
     region = settings.AWS_REGION or None
     return boto3.client(
-    "s3",
-    region_name=region,
+        "s3",
+        region_name=region,
     )

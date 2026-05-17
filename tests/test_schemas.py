@@ -8,7 +8,7 @@ from app.schemas import (
     Token,
     TokenData,
     ForgotPasswordRequest,
-    ResetPassword
+    ResetPassword,
 )
 
 
@@ -89,7 +89,7 @@ class TestUserOut:
             "role": "user",
             "blocked": False,
             "is_verified": True,
-            "username": "testuser"
+            "username": "testuser",
         }
         user_out = UserOut(**data)
         assert user_out.id == 1
@@ -104,7 +104,7 @@ class TestUserOut:
             "first_name": "Test",
             "last_name": "User",
             "role": "user",
-            "username": "testuser"
+            "username": "testuser",
         }
         user_out = UserOut(**data)
         assert user_out.blocked is False

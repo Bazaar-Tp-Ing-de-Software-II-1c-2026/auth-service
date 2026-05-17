@@ -5,7 +5,7 @@ from app.security import (
     verify_password,
     create_access_token,
     decode_token,
-    generate_numeric_code
+    generate_numeric_code,
 )
 
 

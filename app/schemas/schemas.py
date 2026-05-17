@@ -1,14 +1,21 @@
 from datetime import datetime
 from typing import Any, Optional, Annotated
 
-from pydantic import BaseModel, ConfigDict, EmailStr, field_validator, HttpUrl, StringConstraints
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    EmailStr,
+    field_validator,
+    HttpUrl,
+    StringConstraints,
+)
 from pydantic_core import PydanticCustomError
 import re
-
 
 # -------------------------
 # HELPERS (internos)
 # -------------------------
+
 
 def _normalize_email(v: EmailStr) -> str:
     return v.strip().lower()
@@ -41,6 +48,7 @@ def _validate_password_strength(v: str) -> str:
 # -------------------------
 # AUTH
 # -------------------------
+
 
 class Token(BaseModel):
     access_token: str
@@ -144,6 +152,7 @@ class ResetPassword(BaseModel):
 # USER
 # -------------------------
 
+
 class UserBase(BaseModel):
     username: str
     first_name: Optional[str] = None
@@ -222,8 +231,10 @@ class UserUpdate(BaseModel):
         if len(normalized) > 280:
             raise ValueError("Description cannot exceed 280 characters")
         return normalized or None
-    
-    @field_validator("shipping_address", "shipping_city", "shipping_state", "shipping_country")
+
+    @field_validator(
+        "shipping_address", "shipping_city", "shipping_state", "shipping_country"
+    )
     @classmethod
     def validate_address_fields(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
@@ -232,7 +243,7 @@ class UserUpdate(BaseModel):
         if len(normalized) > 200:
             raise ValueError("Address field cannot exceed 200 characters")
         return normalized or None
-    
+
     @field_validator("shipping_postal_code")
     @classmethod
     def validate_postal_code(cls, v: Optional[str]) -> Optional[str]:
@@ -242,7 +253,7 @@ class UserUpdate(BaseModel):
         if len(normalized) > 20:
             raise ValueError("Postal code cannot exceed 20 characters")
         return normalized or None
-    
+
     @field_validator("shipping_phone")
     @classmethod
     def validate_phone(cls, v: Optional[str]) -> Optional[str]:
@@ -257,6 +268,7 @@ class UserUpdate(BaseModel):
 # -------------------------
 # NOTIFICATIONS
 # -------------------------
+
 
 class NotificationCreateRequest(BaseModel):
     user_id: int
@@ -291,8 +303,11 @@ class NotificationListResponse(BaseModel):
 # PIN AUTHENTICATION
 # -------------------------
 
+
 class PINSetupRequest(BaseModel):
-    pin: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=8)]
+    pin: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=6, max_length=8)
+    ]
     device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
     @field_validator("pin")
@@ -317,7 +332,9 @@ class PINSetupRequest(BaseModel):
 
 
 class PINLoginRequest(BaseModel):
-    pin: Annotated[str, StringConstraints(strip_whitespace=True, min_length=6, max_length=8)]
+    pin: Annotated[
+        str, StringConstraints(strip_whitespace=True, min_length=6, max_length=8)
+    ]
     device_id: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
     @field_validator("pin")

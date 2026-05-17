@@ -13,7 +13,11 @@ from app import models, schemas, security
 from app.config import settings
 from app.exceptions.handler import ServiceException
 from app.repositories import auth_repository
-from app.utils.email import send_reset_password_email, send_verification_email, send_welcome_email
+from app.utils.email import (
+    send_reset_password_email,
+    send_verification_email,
+    send_welcome_email,
+)
 from app.utils.verification import generate_verification_code
 
 _RATE_LIMIT_SECONDS = 60
@@ -42,7 +46,9 @@ def _check_rate_limit(last_request: datetime | None, context: str) -> None:
     """Lanza ServiceException si no pasó suficiente tiempo desde el último intento."""
     if last_request is None:
         return
-    elapsed = (datetime.now(timezone.utc) - last_request.replace(tzinfo=timezone.utc)).total_seconds()
+    elapsed = (
+        datetime.now(timezone.utc) - last_request.replace(tzinfo=timezone.utc)
+    ).total_seconds()
     if elapsed < _RATE_LIMIT_SECONDS:
         wait = int(_RATE_LIMIT_SECONDS - elapsed)
         raise ServiceException(
@@ -67,21 +73,27 @@ def _send_verification_email(user: models.User, db: Session) -> None:
 
 def _send_welcome_email_safe(user: models.User) -> None:
     try:
-        send_welcome_email(to_email=user.email, username=user.first_name or user.username)
+        send_welcome_email(
+            to_email=user.email, username=user.first_name or user.username
+        )
         logger.info(f"[AUTH] Email de bienvenida enviado a: {user.email}")
     except Exception as e:
         logger.warning(f"[AUTH] Error enviando email de bienvenida a {user.email}: {e}")
 
 
 def register(payload: schemas.UserCreate, db: Session):
-    logger.debug(f"[AUTH ROUTER] Intento de registro: email={payload.email}, username={payload.username}")
+    logger.debug(
+        f"[AUTH ROUTER] Intento de registro: email={payload.email}, username={payload.username}"
+    )
 
     if auth_repository.get_user_by_email(db, payload.email):
-        raise ServiceException(status_code=400, title="Bad Request", detail="Email is already registered.")
+        raise ServiceException(
+            status_code=400, title="Bad Request", detail="Email is already registered."
+        )
 
     # Skip email verification in development mode
     is_verified = settings.SKIP_EMAIL_VERIFICATION
-    
+
     user = models.User(
         email=payload.email,
         username=payload.username,
@@ -97,14 +109,18 @@ def register(payload: schemas.UserCreate, db: Session):
         if not settings.SKIP_EMAIL_VERIFICATION:
             _send_verification_email(user, db)
         else:
-            logger.info(f"[AUTH ROUTER] Email verification skipped (development mode): {user.email}")
+            logger.info(
+                f"[AUTH ROUTER] Email verification skipped (development mode): {user.email}"
+            )
         db.commit()
     except Exception:
         db.rollback()
         raise
 
     db.refresh(user)
-    logger.info(f"[AUTH ROUTER] Usuario registrado EXITOSAMENTE: id={user.id}, email={user.email}")
+    logger.info(
+        f"[AUTH ROUTER] Usuario registrado EXITOSAMENTE: id={user.id}, email={user.email}"
+    )
     return user
 
 
@@ -121,16 +137,28 @@ def login(payload: schemas.UserLogin, db: Session):
         )
 
     if user.blocked:
-        raise ServiceException(status_code=403, title="Forbidden", detail="Your account has been blocked.")
+        raise ServiceException(
+            status_code=403, title="Forbidden", detail="Your account has been blocked."
+        )
 
     # Skip email verification check in development mode
     if not settings.SKIP_EMAIL_VERIFICATION and not user.is_verified:
-        raise ServiceException(status_code=403, title="Forbidden", detail="Please verify your email before logging in.")
+        raise ServiceException(
+            status_code=403,
+            title="Forbidden",
+            detail="Please verify your email before logging in.",
+        )
 
     if not security.verify_password(payload.password, user.hashed_password):
-        raise ServiceException(status_code=401, title="Unauthorized", detail="Invalid username or password.")
+        raise ServiceException(
+            status_code=401,
+            title="Unauthorized",
+            detail="Invalid username or password.",
+        )
 
-    token = security.create_access_token({"sub": str(user.id), "email": user.email, "username": user.username})
+    token = security.create_access_token(
+        {"sub": str(user.id), "email": user.email, "username": user.username}
+    )
     logger.info(f"[AUTH ROUTER] Login EXITOSO: id={user.id}, username={user.username}")
     return {"access_token": token, "token_type": "bearer"}
 
@@ -139,27 +167,45 @@ def google_login(payload: schemas.GoogleLoginRequest, db: Session):
     logger.debug("[AUTH ROUTER] Intento de Google login")
 
     if not settings.GOOGLE_CLIENT_ID_WEB and not settings.GOOGLE_CLIENT_ID_ANDROID:
-        raise ServiceException(status_code=500, title="Internal Server Error", detail="Google Client IDs not configured")
+        raise ServiceException(
+            status_code=500,
+            title="Internal Server Error",
+            detail="Google Client IDs not configured",
+        )
 
     raw_google_token = payload.id_token.strip()
     idinfo = None
-    for client_id in filter(None, [settings.GOOGLE_CLIENT_ID_WEB, settings.GOOGLE_CLIENT_ID_ANDROID]):
+    for client_id in filter(
+        None, [settings.GOOGLE_CLIENT_ID_WEB, settings.GOOGLE_CLIENT_ID_ANDROID]
+    ):
         try:
-            idinfo = id_token.verify_oauth2_token(raw_google_token, google_requests.Request(), client_id)
+            idinfo = id_token.verify_oauth2_token(
+                raw_google_token, google_requests.Request(), client_id
+            )
             break
         except Exception as e:
-            logger.warning(f"[AUTH] Fallo verificación Google con client_id={client_id}: {e}")
+            logger.warning(
+                f"[AUTH] Fallo verificación Google con client_id={client_id}: {e}"
+            )
 
     # Web flow can send access tokens (prefixed with ya29.) instead of JWT id_tokens.
     if not idinfo and raw_google_token.startswith("ya29."):
         idinfo = _get_google_userinfo_from_access_token(raw_google_token)
 
     if not idinfo:
-        raise ServiceException(status_code=401, title="Unauthorized", detail="Invalid or expired Google token.")
+        raise ServiceException(
+            status_code=401,
+            title="Unauthorized",
+            detail="Invalid or expired Google token.",
+        )
 
     email = idinfo.get("email")
     if not email:
-        raise ServiceException(status_code=400, title="Bad Request", detail="Email not found in Google token.")
+        raise ServiceException(
+            status_code=400,
+            title="Bad Request",
+            detail="Email not found in Google token.",
+        )
 
     first_name = idinfo.get("given_name", "")
     last_name = idinfo.get("family_name", "")
@@ -168,7 +214,11 @@ def google_login(payload: schemas.GoogleLoginRequest, db: Session):
 
     if user:
         if user.blocked:
-            raise ServiceException(status_code=403, title="Forbidden", detail="Your account has been blocked.")
+            raise ServiceException(
+                status_code=403,
+                title="Forbidden",
+                detail="Your account has been blocked.",
+            )
 
         if not user.first_name and first_name:
             user.first_name = first_name
@@ -198,7 +248,9 @@ def google_login(payload: schemas.GoogleLoginRequest, db: Session):
     db.commit()
     db.refresh(user)
 
-    token = security.create_access_token({"sub": str(user.id), "email": user.email, "username": user.username})
+    token = security.create_access_token(
+        {"sub": str(user.id), "email": user.email, "username": user.username}
+    )
     logger.info(f"[AUTH ROUTER] Google login EXITOSO: id={user.id}, email={user.email}")
     return {"access_token": token, "token_type": "bearer"}
 
@@ -208,15 +260,23 @@ def verify_email(token: str, db: Session):
     data = security.decode_token(token)
 
     if not data or data.get("scope") != "email-verification":
-        raise ServiceException(status_code=401, title="Unauthorized", detail="Invalid or expired verification token.")
+        raise ServiceException(
+            status_code=401,
+            title="Unauthorized",
+            detail="Invalid or expired verification token.",
+        )
 
     user_id = data.get("sub")
     if user_id is None:
-        raise ServiceException(status_code=401, title="Unauthorized", detail="Invalid verification token.")
+        raise ServiceException(
+            status_code=401, title="Unauthorized", detail="Invalid verification token."
+        )
 
     user = auth_repository.get_user_by_id(db, int(user_id))
     if not user:
-        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
+        raise ServiceException(
+            status_code=404, title="Not Found", detail="User not found."
+        )
 
     if user.is_verified:
         return {"message": "The email is already verified. You can now log in."}
@@ -229,17 +289,25 @@ def verify_email(token: str, db: Session):
     return {"message": "Email verified successfully. You can now log in."}
 
 
-def resend_verification_email(payload: schemas.ResendVerificationEmailRequest, db: Session):
-    logger.debug(f"[AUTH ROUTER] Solicitud de reenvío de verificación: email={payload.email}")
+def resend_verification_email(
+    payload: schemas.ResendVerificationEmailRequest, db: Session
+):
+    logger.debug(
+        f"[AUTH ROUTER] Solicitud de reenvío de verificación: email={payload.email}"
+    )
     user = auth_repository.get_user_by_email(db, payload.email)
 
     if user and not user.is_verified:
-        _check_rate_limit(user.last_verification_email_request, "requesting another verification code")
+        _check_rate_limit(
+            user.last_verification_email_request, "requesting another verification code"
+        )
         user.last_verification_email_request = datetime.now(timezone.utc)
         _send_verification_email(user, db)
         logger.info(f"[AUTH ROUTER] Email de verificación reenviado: user_id={user.id}")
 
-    return {"message": "If an account exists with that email and is not verified, a new code has been sent."}
+    return {
+        "message": "If an account exists with that email and is not verified, a new code has been sent."
+    }
 
 
 def verify_code(payload: schemas.VerifyCodeRequest, db: Session):
@@ -247,19 +315,33 @@ def verify_code(payload: schemas.VerifyCodeRequest, db: Session):
     user = auth_repository.get_user_by_email(db, payload.email)
 
     if not user:
-        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
+        raise ServiceException(
+            status_code=404, title="Not Found", detail="User not found."
+        )
 
     if user.is_verified:
         return {"message": "The email is already verified. You can now log in."}
 
     if not user.verification_code:
-        raise ServiceException(status_code=400, title="Bad Request", detail="No verification code has been sent for this account.")
+        raise ServiceException(
+            status_code=400,
+            title="Bad Request",
+            detail="No verification code has been sent for this account.",
+        )
 
-    if user.verification_code_expires and user.verification_code_expires.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
-        raise ServiceException(status_code=400, title="Bad Request", detail="Code has expired. Please request a new one.")
+    if user.verification_code_expires and user.verification_code_expires.replace(
+        tzinfo=timezone.utc
+    ) < datetime.now(timezone.utc):
+        raise ServiceException(
+            status_code=400,
+            title="Bad Request",
+            detail="Code has expired. Please request a new one.",
+        )
 
     if user.verification_code.lower() != payload.code.lower():
-        raise ServiceException(status_code=400, title="Bad Request", detail="Incorrect code.")
+        raise ServiceException(
+            status_code=400, title="Bad Request", detail="Incorrect code."
+        )
 
     user.is_verified = True
     user.verification_code = None
@@ -272,11 +354,15 @@ def verify_code(payload: schemas.VerifyCodeRequest, db: Session):
 
 
 def request_reset_password(payload: schemas.ForgotPasswordRequest, db: Session):
-    logger.debug(f"[AUTH ROUTER] Solicitud de reset de contraseña: email={payload.email}")
+    logger.debug(
+        f"[AUTH ROUTER] Solicitud de reset de contraseña: email={payload.email}"
+    )
     user = auth_repository.get_user_by_email(db, payload.email)
 
     if user:
-        _check_rate_limit(user.last_password_reset_request, "requesting another password reset")
+        _check_rate_limit(
+            user.last_password_reset_request, "requesting another password reset"
+        )
 
         reset_code = generate_verification_code(length=8)
         user.verification_code = reset_code
@@ -291,24 +377,42 @@ def request_reset_password(payload: schemas.ForgotPasswordRequest, db: Session):
         )
         logger.info(f"[AUTH ROUTER] Email de reset enviado: user_id={user.id}")
 
-    return {"message": "If an account exists with that email, a password reset email has been sent."}
+    return {
+        "message": "If an account exists with that email, a password reset email has been sent."
+    }
 
 
-def reset_password_with_code(payload: schemas.ResetPasswordWithCodeRequest, db: Session):
+def reset_password_with_code(
+    payload: schemas.ResetPasswordWithCodeRequest, db: Session
+):
     logger.debug(f"[AUTH ROUTER] Reset de contraseña con código: email={payload.email}")
     user = auth_repository.get_user_by_email(db, payload.email)
 
     if not user:
-        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
+        raise ServiceException(
+            status_code=404, title="Not Found", detail="User not found."
+        )
 
     if not user.verification_code:
-        raise ServiceException(status_code=400, title="Bad Request", detail="No password reset code has been sent for this account.")
+        raise ServiceException(
+            status_code=400,
+            title="Bad Request",
+            detail="No password reset code has been sent for this account.",
+        )
 
-    if user.verification_code_expires and user.verification_code_expires.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
-        raise ServiceException(status_code=400, title="Bad Request", detail="Code has expired. Please request a new one.")
+    if user.verification_code_expires and user.verification_code_expires.replace(
+        tzinfo=timezone.utc
+    ) < datetime.now(timezone.utc):
+        raise ServiceException(
+            status_code=400,
+            title="Bad Request",
+            detail="Code has expired. Please request a new one.",
+        )
 
     if user.verification_code.lower() != payload.code.lower():
-        raise ServiceException(status_code=400, title="Bad Request", detail="Incorrect code.")
+        raise ServiceException(
+            status_code=400, title="Bad Request", detail="Incorrect code."
+        )
 
     user.hashed_password = security.hash_password(payload.new_password)
     user.verification_code = None
@@ -316,7 +420,9 @@ def reset_password_with_code(payload: schemas.ResetPasswordWithCodeRequest, db: 
     auth_repository.save(db, user)
 
     logger.info(f"[AUTH ROUTER] Contraseña reseteada EXITOSAMENTE: user_id={user.id}")
-    return {"message": "Password successfully updated. You can now log in with your new password."}
+    return {
+        "message": "Password successfully updated. You can now log in with your new password."
+    }
 
 
 def reset_password(payload: schemas.ResetPassword, db: Session):
@@ -324,15 +430,23 @@ def reset_password(payload: schemas.ResetPassword, db: Session):
     data = security.decode_token(payload.token)
 
     if not data or data.get("scope") != "password-reset":
-        raise ServiceException(status_code=401, title="Unauthorized", detail="Invalid or expired reset token.")
+        raise ServiceException(
+            status_code=401,
+            title="Unauthorized",
+            detail="Invalid or expired reset token.",
+        )
 
     user_id = data.get("sub")
     if user_id is None:
-        raise ServiceException(status_code=401, title="Unauthorized", detail="Invalid reset token.")
+        raise ServiceException(
+            status_code=401, title="Unauthorized", detail="Invalid reset token."
+        )
 
     user = auth_repository.get_user_by_id(db, int(user_id))
     if not user:
-        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
+        raise ServiceException(
+            status_code=404, title="Not Found", detail="User not found."
+        )
 
     token_expires = user.reset_token_expires
     if (
@@ -340,12 +454,20 @@ def reset_password(payload: schemas.ResetPassword, db: Session):
         or not token_expires
         or token_expires.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc)
     ):
-        raise ServiceException(status_code=401, title="Unauthorized", detail="Password reset token has expired.")
+        raise ServiceException(
+            status_code=401,
+            title="Unauthorized",
+            detail="Password reset token has expired.",
+        )
 
     user.hashed_password = security.hash_password(payload.new_password)
     user.reset_token = None
     user.reset_token_expires = None
     auth_repository.save(db, user)
 
-    logger.info(f"[AUTH ROUTER] Contraseña reseteada por token EXITOSAMENTE: user_id={user.id}")
-    return {"message": "Password reset successfully. You can now log in with your new password."}
+    logger.info(
+        f"[AUTH ROUTER] Contraseña reseteada por token EXITOSAMENTE: user_id={user.id}"
+    )
+    return {
+        "message": "Password reset successfully. You can now log in with your new password."
+    }

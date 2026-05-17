@@ -8,9 +8,21 @@ from app import models, schemas
 from app.api.dependencies import get_current_user
 from app.database import get_db
 from app.services import auth_service
-from app.schemas.schemas import UserCreate, UserLogin, Token, UserOut, GoogleLoginRequest, ResendVerificationEmailRequest, VerifyCodeRequest, ForgotPasswordRequest, ResetPasswordWithCodeRequest, ResetPassword
+from app.schemas.schemas import (
+    UserCreate,
+    UserLogin,
+    Token,
+    UserOut,
+    GoogleLoginRequest,
+    ResendVerificationEmailRequest,
+    VerifyCodeRequest,
+    ForgotPasswordRequest,
+    ResetPasswordWithCodeRequest,
+    ResetPassword,
+)
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
+
 
 @router.post("/register", response_model=UserOut, status_code=201)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
@@ -39,7 +51,9 @@ def verify_email(token: str, db: Session = Depends(get_db)):
 
 
 @router.post("/resend-verification-email", response_model=dict)
-def resend_verification_email(payload: ResendVerificationEmailRequest, db: Session = Depends(get_db)):
+def resend_verification_email(
+    payload: ResendVerificationEmailRequest, db: Session = Depends(get_db)
+):
     return auth_service.resend_verification_email(payload, db)
 
 
@@ -49,12 +63,16 @@ def verify_code(payload: VerifyCodeRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/request-reset-password", response_model=dict)
-def request_reset_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+def request_reset_password(
+    payload: ForgotPasswordRequest, db: Session = Depends(get_db)
+):
     return auth_service.request_reset_password(payload, db)
 
 
 @router.post("/reset-password-with-code", response_model=dict)
-def reset_password_with_code(payload: ResetPasswordWithCodeRequest, db: Session = Depends(get_db)):
+def reset_password_with_code(
+    payload: ResetPasswordWithCodeRequest, db: Session = Depends(get_db)
+):
     return auth_service.reset_password_with_code(payload, db)
 
 
