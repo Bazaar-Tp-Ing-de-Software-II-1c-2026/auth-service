@@ -18,11 +18,12 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql://user_auth:pass_auth@db-auth:5432/auth_db
-      - EMAIL_FROM=contacto@bazaar-app.me
-      - AWS_REGION=us-east-2
-      - S3_BUCKET_NAME=bazaar-server-imagenes
-      - RESEND_API_KEY=re_Jqw3fevg_JcEpxRyH3U6oNEQknYdtnF2b
+      - DATABASE_URL=${DATABASE_URL}
+      - PRODUCT_SERVICE_URL=${PRODUCT_SERVICE_URL}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - AWS_REGION=${AWS_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+      - RESEND_API_KEY=${RESEND_API_KEY}
     depends_on:
       db-auth:
         condition: service_healthy

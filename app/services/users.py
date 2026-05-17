@@ -4,6 +4,7 @@ from typing import Any
 from urllib.parse import unquote
 from datetime import date
 
+import httpx
 from loguru import logger
 from sqlalchemy.orm import Session
 
@@ -13,6 +14,28 @@ from app.exceptions.handler import ServiceException
 from app.repositories import users as users_repository
 from app.services.storage import get_s3_client
 from app.repositories.users import count_total_users, get_users_timeline, get_users_paginated
+
+
+def _notify_product_service_block(user_id: int) -> None:
+    url = f"{settings.PRODUCT_SERVICE_URL}/internal-products/sellers/{user_id}/block"
+    response = httpx.patch(url, timeout=5.0)
+    if response.status_code >= 400:
+        raise ServiceException(
+            status_code=502,
+            title="Bad Gateway",
+            detail="Failed to notify product-service about user block.",
+        )
+
+
+def _notify_product_service_unblock(user_id: int) -> None:
+    url = f"{settings.PRODUCT_SERVICE_URL}/internal-products/sellers/{user_id}/unblock"
+    response = httpx.patch(url, timeout=5.0)
+    if response.status_code >= 400:
+        raise ServiceException(
+            status_code=502,
+            title="Bad Gateway",
+            detail="Failed to notify product-service about user unblock.",
+        )
 
 
 def get_my_profile(current_user: models.User) -> models.User:
@@ -204,15 +227,29 @@ def block_user(db: Session, user_id: int, admin_user: models.User):
     user.blocked = True
     try:
         users_repository.save_user(db, user)
-        # TODO: Notificar a otros servicios que los productos deben ocultarse.
-        # Ejemplo (comentado):
-        # notify_product_service_user_blocked(user.id)
-        logger.info(f"[USER ROUTER] Usuario bloqueado: user_id={user.id} by admin_id={admin_user.id}")
-        return {"message": "User blocked successfully."}
     except Exception as e:
         db.rollback()
         logger.error(f"[USER ROUTER] Error bloqueando usuario user_id={user_id}: {e}")
         raise ServiceException(status_code=500, title="Internal Server Error", detail="Error blocking user.")
+
+    try:
+        _notify_product_service_block(user.id)
+    except Exception as e:
+        user.blocked = False
+        users_repository.save_user(db, user)
+        logger.error(
+            f"[USER ROUTER] Error notificando bloqueo a product-service user_id={user_id}: {e}"
+        )
+        if isinstance(e, ServiceException):
+            raise e
+        raise ServiceException(
+            status_code=502,
+            title="Bad Gateway",
+            detail="Failed to notify product-service about user block.",
+        )
+
+    logger.info(f"[USER ROUTER] Usuario bloqueado: user_id={user.id} by admin_id={admin_user.id}")
+    return {"message": "User blocked successfully."}
 
 
 def unblock_user(db: Session, user_id: int, admin_user: models.User):
@@ -228,12 +265,26 @@ def unblock_user(db: Session, user_id: int, admin_user: models.User):
     user.blocked = False
     try:
         users_repository.save_user(db, user)
-        # TODO: Notificar a otros servicios que los productos pueden volver a mostrarse si hay stock.
-        # Ejemplo (comentado):
-        # notify_product_service_user_unblocked(user.id)
-        logger.info(f"[USER ROUTER] Usuario desbloqueado: user_id={user.id} by admin_id={admin_user.id}")
-        return {"message": "User unblocked successfully."}
     except Exception as e:
         db.rollback()
         logger.error(f"[USER ROUTER] Error desbloqueando usuario user_id={user_id}: {e}")
         raise ServiceException(status_code=500, title="Internal Server Error", detail="Error unblocking user.")
+
+    try:
+        _notify_product_service_unblock(user.id)
+    except Exception as e:
+        user.blocked = True
+        users_repository.save_user(db, user)
+        logger.error(
+            f"[USER ROUTER] Error notificando desbloqueo a product-service user_id={user_id}: {e}"
+        )
+        if isinstance(e, ServiceException):
+            raise e
+        raise ServiceException(
+            status_code=502,
+            title="Bad Gateway",
+            detail="Failed to notify product-service about user unblock.",
+        )
+
+    logger.info(f"[USER ROUTER] Usuario desbloqueado: user_id={user.id} by admin_id={admin_user.id}")
+    return {"message": "User unblocked successfully."}
