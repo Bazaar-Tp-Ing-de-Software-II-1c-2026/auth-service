@@ -182,3 +182,58 @@ def list_users_admin(db: Session, page: int, limit: int, search: str | None = No
         "page": page,
         "limit": limit,
     }
+
+
+def block_user(db: Session, user_id: int, admin_user: models.User):
+    logger.debug(f"[USER ROUTER] Admin {admin_user.id} requests block user {user_id}")
+
+    if admin_user.id == user_id:
+        raise ServiceException(
+            status_code=400,
+            title="Bad Request",
+            detail="Administrators cannot block their own account.",
+        )
+
+    user = users_repository.get_user_by_id(db, user_id)
+    if not user:
+        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
+
+    if user.blocked:
+        return {"message": "User is already blocked."}
+
+    user.blocked = True
+    try:
+        users_repository.save_user(db, user)
+        # TODO: Notificar a otros servicios que los productos deben ocultarse.
+        # Ejemplo (comentado):
+        # notify_product_service_user_blocked(user.id)
+        logger.info(f"[USER ROUTER] Usuario bloqueado: user_id={user.id} by admin_id={admin_user.id}")
+        return {"message": "User blocked successfully."}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[USER ROUTER] Error bloqueando usuario user_id={user_id}: {e}")
+        raise ServiceException(status_code=500, title="Internal Server Error", detail="Error blocking user.")
+
+
+def unblock_user(db: Session, user_id: int, admin_user: models.User):
+    logger.debug(f"[USER ROUTER] Admin {admin_user.id} requests unblock user {user_id}")
+
+    user = users_repository.get_user_by_id(db, user_id)
+    if not user:
+        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
+
+    if not user.blocked:
+        return {"message": "User is not blocked."}
+
+    user.blocked = False
+    try:
+        users_repository.save_user(db, user)
+        # TODO: Notificar a otros servicios que los productos pueden volver a mostrarse si hay stock.
+        # Ejemplo (comentado):
+        # notify_product_service_user_unblocked(user.id)
+        logger.info(f"[USER ROUTER] Usuario desbloqueado: user_id={user.id} by admin_id={admin_user.id}")
+        return {"message": "User unblocked successfully."}
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[USER ROUTER] Error desbloqueando usuario user_id={user_id}: {e}")
+        raise ServiceException(status_code=500, title="Internal Server Error", detail="Error unblocking user.")
