@@ -12,8 +12,11 @@ from main import app
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
 
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
 
 @pytest.fixture(scope="function")
 def db():
@@ -38,7 +41,7 @@ def client(db):
 @pytest.fixture
 def test_user(db):
     from app.security import hash_password
-    
+
     user = User(
         email="test@example.com",
         username="testuser",
@@ -58,7 +61,7 @@ def test_user(db):
 @pytest.fixture
 def test_admin(db):
     from app.security import hash_password
-    
+
     admin = User(
         email="admin@example.com",
         username="admin",
@@ -82,5 +85,5 @@ def valid_user_data():
         "username": "newuser",
         "password": "SecurePass123!",
         "first_name": "New",
-        "last_name": "User"
+        "last_name": "User",
     }
