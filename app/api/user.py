@@ -5,7 +5,8 @@ from typing import Any
 from fastapi import APIRouter, Depends
 
 from urllib.parse import unquote
-#from fastapi import APIRouter, Depends, HTTPException, status
+
+# from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app import models, schemas
@@ -18,25 +19,26 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 
 @router.get("/me", response_model=schemas.UserOut)
 def get_my_profile(current_user: models.User = Depends(get_current_user)):
-	return users_service.get_my_profile(current_user)
+    return users_service.get_my_profile(current_user)
 
 
 @router.patch("/me", response_model=schemas.UserOut)
 def update_my_profile(
-	payload: schemas.UserUpdate,
-	db: Session = Depends(get_db),
-	current_user: models.User = Depends(get_current_user),
+    payload: schemas.UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user),
 ) -> Any:
-	return users_service.update_my_profile(payload, db, current_user)
+    return users_service.update_my_profile(payload, db, current_user)
+
 
 @router.get("/{id}", response_model=schemas.UserPublicOut)
 def get_user_public_profile_by_id(id: int, db: Session = Depends(get_db)):
-	return users_service.get_user_public_profile_by_id(id, db)
+    return users_service.get_user_public_profile_by_id(id, db)
 
 
 @router.post("/me/upload-url")
 def generate_upload_url(
-	content_type: str,
-	current_user: models.User = Depends(get_current_user),
+    content_type: str,
+    current_user: models.User = Depends(get_current_user),
 ):
-	return users_service.generate_upload_url(content_type, current_user)
+    return users_service.generate_upload_url(content_type, current_user)

@@ -2,6 +2,7 @@ from sqlalchemy import Boolean, Column, Integer, String, DateTime, Text
 from datetime import datetime
 from ..database import Base
 
+
 # Table for users
 class User(Base):
     __tablename__ = "users"
@@ -11,7 +12,9 @@ class User(Base):
     hashed_password = Column(String, nullable=False)
     first_name = Column(String, nullable=True)
     last_name = Column(String, nullable=True)
-    role = Column(String, default="user", server_default="user", nullable=False, index=True)
+    role = Column(
+        String, default="user", server_default="user", nullable=False, index=True
+    )
     blocked = Column(Boolean, default=False, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     reset_token = Column(String, nullable=True, index=True)
@@ -22,7 +25,7 @@ class User(Base):
     last_verification_email_request = Column(DateTime, nullable=True)
     profile_picture_url = Column(String, nullable=True)
     description = Column(String(500), nullable=True, default="")
-    
+
     # Shipping address fields
     shipping_address = Column(String(200), nullable=True)
     shipping_city = Column(String(100), nullable=True)
@@ -30,12 +33,10 @@ class User(Base):
     shipping_postal_code = Column(String(20), nullable=True)
     shipping_country = Column(String(100), nullable=True)
     shipping_phone = Column(String(20), nullable=True)
-    
+
     # PIN authentication fields
     pin_hash = Column(String(255), nullable=True)
     pin_device_id = Column(String(255), nullable=True, index=True)
     pin_failed_attempts = Column(Integer, default=0, nullable=False)
     pin_locked_until = Column(DateTime, nullable=True)
     pin_created_at = Column(DateTime, nullable=True)
-
-

@@ -68,9 +68,7 @@ def register_device_token(
         db.commit()
         db.refresh(existing)
 
-        logger.info(
-            f"[DEVICES] Updated existing token for user {current_user.id}"
-        )
+        logger.info(f"[DEVICES] Updated existing token for user {current_user.id}")
 
         return existing
 
@@ -88,9 +86,7 @@ def register_device_token(
     db.commit()
     db.refresh(device_token)
 
-    logger.info(
-        f"[DEVICES] Created new token for user {current_user.id}"
-    )
+    logger.info(f"[DEVICES] Created new token for user {current_user.id}")
 
     return device_token
 
@@ -177,10 +173,7 @@ def deactivate_token(
     db.commit()
 
     logger.info(
-        f"[DEVICES] Deactivated token {token_id} "
-        f"for user {current_user.id}"
+        f"[DEVICES] Deactivated token {token_id} " f"for user {current_user.id}"
     )
 
-    return {
-        "message": "Token deactivated"
-    }
+    return {"message": "Token deactivated"}

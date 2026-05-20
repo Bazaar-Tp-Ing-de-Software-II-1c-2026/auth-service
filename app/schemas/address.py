@@ -71,5 +71,3 @@ class AddressOut(AddressBase):
 class AddressListResponse(BaseModel):
     data: list[AddressOut]
     total: int
-
-
