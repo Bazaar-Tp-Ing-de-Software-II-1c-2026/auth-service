@@ -10,12 +10,12 @@ class TestUserModel:
             username="testuser",
             hashed_password=hash_password("password123"),
             first_name="Test",
-            last_name="User"
+            last_name="User",
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
         assert user.id is not None
         assert user.email == "test@example.com"
         assert user.username == "testuser"
@@ -29,18 +29,18 @@ class TestUserModel:
         user1 = User(
             email="test@example.com",
             username="user1",
-            hashed_password=hash_password("pass123")
+            hashed_password=hash_password("pass123"),
         )
         db.add(user1)
         db.commit()
-        
+
         user2 = User(
             email="test@example.com",
             username="user2",
-            hashed_password=hash_password("pass123")
+            hashed_password=hash_password("pass123"),
         )
         db.add(user2)
-        
+
         with pytest.raises(Exception):
             db.commit()
 
@@ -48,24 +48,24 @@ class TestUserModel:
         user = User(
             email="test@example.com",
             username="testuser",
-            hashed_password=hash_password("pass123")
+            hashed_password=hash_password("pass123"),
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
         assert user.role == "user"
 
     def test_user_blocked_default(self, db):
         user = User(
             email="test@example.com",
             username="testuser",
-            hashed_password=hash_password("pass123")
+            hashed_password=hash_password("pass123"),
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
         assert user.blocked is False
 
     def test_user_custom_role(self, db):
@@ -73,12 +73,12 @@ class TestUserModel:
             email="test@example.com",
             username="testuser",
             hashed_password=hash_password("pass123"),
-            role="admin"
+            role="admin",
         )
         db.add(user)
         db.commit()
         db.refresh(user)
-        
+
         assert user.role == "admin"
 
     def test_query_user_by_email(self, db, test_user):
@@ -96,6 +96,6 @@ class TestUserModel:
         test_user.first_name = "Updated"
         db.commit()
         db.refresh(test_user)
-        
+
         assert test_user.blocked is True
         assert test_user.first_name == "Updated"

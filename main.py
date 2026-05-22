@@ -56,12 +56,14 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
         messages.append(msg)
 
-        invalid_params.append({
-            "in": location,
-            "name": ".".join(map(str, err["loc"][1:])),
-            "reason": msg,
-            "type": error_type,
-        })
+        invalid_params.append(
+            {
+                "in": location,
+                "name": ".".join(map(str, err["loc"][1:])),
+                "reason": msg,
+                "type": error_type,
+            }
+        )
 
     detail = " | ".join(messages) if messages else "Invalid request data"
 

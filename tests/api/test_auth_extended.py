@@ -46,7 +46,9 @@ class TestVerifyCodeEndpoint:
         assert "already verified" in response.json()["message"]
 
     def test_verify_code_requires_existing_code(self, client, db):
-        user = _create_user(db, email="nocode@example.com", username="nocode", is_verified=False)
+        user = _create_user(
+            db, email="nocode@example.com", username="nocode", is_verified=False
+        )
 
         response = client.post(
             "/api/auth/verify-code",
@@ -323,20 +325,36 @@ class TestGoogleLoginEndpoint:
         assert "not configured" in response.json()["detail"]
 
     def test_google_login_invalid_token(self, client, monkeypatch):
-        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
-        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "android-id")
+        monkeypatch.setattr(
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id"
+        )
+        monkeypatch.setattr(
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "android-id"
+        )
 
-        with patch("app.services.auth_service.id_token.verify_oauth2_token", side_effect=[Exception("web fail"), Exception("android fail")]):
-            response = client.post("/api/auth/google-login", json={"id_token": "bad-token"})
+        with patch(
+            "app.services.auth_service.id_token.verify_oauth2_token",
+            side_effect=[Exception("web fail"), Exception("android fail")],
+        ):
+            response = client.post(
+                "/api/auth/google-login", json={"id_token": "bad-token"}
+            )
 
         assert response.status_code == 401
         assert "Invalid or expired Google token" in response.json()["detail"]
 
     def test_google_login_missing_email(self, client, monkeypatch):
-        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
-        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "")
+        monkeypatch.setattr(
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id"
+        )
+        monkeypatch.setattr(
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", ""
+        )
 
-        with patch("app.services.auth_service.id_token.verify_oauth2_token", return_value={"given_name": "No", "family_name": "Email"}):
+        with patch(
+            "app.services.auth_service.id_token.verify_oauth2_token",
+            return_value={"given_name": "No", "family_name": "Email"},
+        ):
             response = client.post("/api/auth/google-login", json={"id_token": "token"})
 
         assert response.status_code == 400
@@ -352,14 +370,27 @@ class TestGoogleLoginEndpoint:
         )
         assert blocked.blocked is True
 
-        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
-        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "")
-        with patch("app.services.auth_service.id_token.verify_oauth2_token", return_value={"email": blocked.email, "given_name": "Block", "family_name": "Ed"}):
+        monkeypatch.setattr(
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id"
+        )
+        monkeypatch.setattr(
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", ""
+        )
+        with patch(
+            "app.services.auth_service.id_token.verify_oauth2_token",
+            return_value={
+                "email": blocked.email,
+                "given_name": "Block",
+                "family_name": "Ed",
+            },
+        ):
             response = client.post("/api/auth/google-login", json={"id_token": "token"})
 
         assert response.status_code == 403
 
-    def test_google_login_existing_unverified_user_gets_verified(self, client, db, monkeypatch):
+    def test_google_login_existing_unverified_user_gets_verified(
+        self, client, db, monkeypatch
+    ):
         user = _create_user(
             db,
             email="google-existing@example.com",
@@ -369,15 +400,22 @@ class TestGoogleLoginEndpoint:
             is_verified=False,
         )
 
-        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
-        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "")
+        monkeypatch.setattr(
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id"
+        )
+        monkeypatch.setattr(
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", ""
+        )
         idinfo = {
             "email": user.email,
             "given_name": "Google",
             "family_name": "User",
         }
 
-        with patch("app.services.auth_service.id_token.verify_oauth2_token", return_value=idinfo), patch("app.services.auth_service.send_welcome_email") as mock_welcome:
+        with patch(
+            "app.services.auth_service.id_token.verify_oauth2_token",
+            return_value=idinfo,
+        ), patch("app.services.auth_service.send_welcome_email") as mock_welcome:
             response = client.post("/api/auth/google-login", json={"id_token": "token"})
 
         assert response.status_code == 200
@@ -390,7 +428,9 @@ class TestGoogleLoginEndpoint:
         assert updated.first_name == "Google"
         assert updated.last_name == "User"
 
-    def test_google_login_creates_new_user_and_resolves_username_collision(self, client, db, monkeypatch):
+    def test_google_login_creates_new_user_and_resolves_username_collision(
+        self, client, db, monkeypatch
+    ):
         _create_user(
             db,
             email="john-existing@example.com",
@@ -398,15 +438,22 @@ class TestGoogleLoginEndpoint:
             is_verified=True,
         )
 
-        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id")
-        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", "")
+        monkeypatch.setattr(
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "web-id"
+        )
+        monkeypatch.setattr(
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", ""
+        )
         idinfo = {
             "email": "john@example.com",
             "given_name": "John",
             "family_name": "New",
         }
 
-        with patch("app.services.auth_service.id_token.verify_oauth2_token", return_value=idinfo), patch("app.services.auth_service.send_welcome_email") as mock_welcome:
+        with patch(
+            "app.services.auth_service.id_token.verify_oauth2_token",
+            return_value=idinfo,
+        ), patch("app.services.auth_service.send_welcome_email") as mock_welcome:
             response = client.post("/api/auth/google-login", json={"id_token": "token"})
 
         assert response.status_code == 200
@@ -429,7 +476,9 @@ class TestAuthHelpers:
         assert auth_dependencies.get_optional_user("Bearer invalid-token", db) is None
 
     def test_get_optional_user_with_valid_token_returns_user(self, db):
-        user = _create_user(db, email="opt@example.com", username="optuser", is_verified=True)
+        user = _create_user(
+            db, email="opt@example.com", username="optuser", is_verified=True
+        )
         token = create_access_token({"sub": str(user.id)})
 
         resolved = auth_dependencies.get_optional_user(f"Bearer {token}", db)

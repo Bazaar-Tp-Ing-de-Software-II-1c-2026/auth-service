@@ -30,7 +30,9 @@ class TestGetCurrentUser:
         assert "Invalid token" in exc.value.detail
 
     def test_missing_sub_raises_401(self, db):
-        with patch("app.api.dependencies.security.decode_token", return_value={"sub": None}):
+        with patch(
+            "app.api.dependencies.security.decode_token", return_value={"sub": None}
+        ):
             with pytest.raises(ServiceException) as exc:
                 get_current_user(authorization="Bearer token", db=db)
 
@@ -38,7 +40,9 @@ class TestGetCurrentUser:
         assert "missing user id" in exc.value.detail
 
     def test_user_not_found_raises_404(self, db):
-        with patch("app.api.dependencies.security.decode_token", return_value={"sub": "999999"}):
+        with patch(
+            "app.api.dependencies.security.decode_token", return_value={"sub": "999999"}
+        ):
             with pytest.raises(ServiceException) as exc:
                 get_current_user(authorization="Bearer token", db=db)
 
@@ -46,7 +50,10 @@ class TestGetCurrentUser:
         assert "User not found" in exc.value.detail
 
     def test_valid_token_returns_user(self, db, test_user):
-        with patch("app.api.dependencies.security.decode_token", return_value={"sub": str(test_user.id)}):
+        with patch(
+            "app.api.dependencies.security.decode_token",
+            return_value={"sub": str(test_user.id)},
+        ):
             user = get_current_user(authorization="Bearer token", db=db)
 
         assert user.id == test_user.id
@@ -68,11 +75,17 @@ class TestGetOptionalUser:
             assert get_optional_user(authorization="Bearer token", db=db) is None
 
     def test_decode_exception_returns_none(self, db):
-        with patch("app.api.dependencies.security.decode_token", side_effect=RuntimeError("boom")):
+        with patch(
+            "app.api.dependencies.security.decode_token",
+            side_effect=RuntimeError("boom"),
+        ):
             assert get_optional_user(authorization="Bearer token", db=db) is None
 
     def test_valid_token_returns_user(self, db, test_user):
-        with patch("app.api.dependencies.security.decode_token", return_value={"sub": str(test_user.id)}):
+        with patch(
+            "app.api.dependencies.security.decode_token",
+            return_value={"sub": str(test_user.id)},
+        ):
             user = get_optional_user(authorization="Bearer token", db=db)
 
         assert user is not None

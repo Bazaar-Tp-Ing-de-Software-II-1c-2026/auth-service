@@ -6,7 +6,9 @@ from app import logger as logger_module
 def test_setup_logger_development_configures_debug_format(monkeypatch):
     monkeypatch.setattr(logger_module.settings, "ENVIRONMENT", "development")
 
-    with patch.object(logger_module.logger, "remove") as mock_remove, patch.object(logger_module.logger, "add") as mock_add:
+    with patch.object(logger_module.logger, "remove") as mock_remove, patch.object(
+        logger_module.logger, "add"
+    ) as mock_add:
         returned = logger_module.setup_logger()
 
     mock_remove.assert_called_once()
@@ -20,7 +22,9 @@ def test_setup_logger_development_configures_debug_format(monkeypatch):
 def test_setup_logger_production_configures_info_format(monkeypatch):
     monkeypatch.setattr(logger_module.settings, "ENVIRONMENT", "production")
 
-    with patch.object(logger_module.logger, "remove") as mock_remove, patch.object(logger_module.logger, "add") as mock_add:
+    with patch.object(logger_module.logger, "remove") as mock_remove, patch.object(
+        logger_module.logger, "add"
+    ) as mock_add:
         returned = logger_module.setup_logger()
 
     mock_remove.assert_called_once()
