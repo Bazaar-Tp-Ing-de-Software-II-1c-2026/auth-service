@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, cast, Date
+from sqlalchemy import func, cast, Date, or_
 from datetime import date
 
 from app import models
@@ -32,3 +32,28 @@ def get_users_timeline(db: Session, start_date: date, end_date: date):
         .order_by(cast(models.User.created_at, Date))
         .all()
     )
+
+
+def get_users_paginated(db: Session, page: int, limit: int, search: str | None = None):
+    query = db.query(models.User)
+
+    if search:
+        search_term = f"%{search.strip()}%"
+        query = query.filter(
+            or_(
+                models.User.email.ilike(search_term),
+                models.User.username.ilike(search_term),
+                models.User.first_name.ilike(search_term),
+                models.User.last_name.ilike(search_term),
+            )
+        )
+
+    total = query.count()
+    users = (
+        query.order_by(models.User.created_at.desc(), models.User.id.desc())
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    return users, total
