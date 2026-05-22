@@ -132,7 +132,7 @@ def generate_upload_url(content_type: str, current_user: models.User):
 
 
 def get_user_metrics(db: Session, start_date: date, end_date: date):
-   try:
+    try:
         total_users = count_total_users(db)
         timeline = get_users_timeline(db, start_date, end_date)
 
