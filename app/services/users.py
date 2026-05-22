@@ -12,7 +12,7 @@ from app.config import settings
 from app.exceptions.handler import ServiceException
 from app.repositories import users as users_repository
 from app.services.storage import get_s3_client
-from app.repositories.users import count_total_users, count_users_in_period, get_users_timeline
+from app.repositories.users import count_total_users, get_users_timeline
 
 
 def get_my_profile(current_user: models.User) -> models.User:
