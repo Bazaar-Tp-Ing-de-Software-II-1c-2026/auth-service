@@ -177,6 +177,23 @@ class UserOut(UserBase):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AdminUserListItem(BaseModel):
+    id: int
+    name: str
+    email: EmailStr
+    created_at: datetime
+    status: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PaginatedAdminUsersResponse(BaseModel):
+    data: list[AdminUserListItem]
+    total: int
+    page: int
+    limit: int
+
+
 class UserPublicOut(UserBase):
     model_config = ConfigDict(from_attributes=True)
 

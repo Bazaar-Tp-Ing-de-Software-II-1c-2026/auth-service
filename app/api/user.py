@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from datetime import date
 
 from app import models, schemas
-from app.api.dependencies import get_current_user
+from app.api.dependencies import get_current_user, require_admin
 from app.database import get_db
 from app.services import users as users_service
 
@@ -30,6 +30,17 @@ def update_my_profile(
     current_user: models.User = Depends(get_current_user),
 ) -> Any:
     return users_service.update_my_profile(payload, db, current_user)
+
+
+@router.get("", response_model=schemas.PaginatedAdminUsersResponse)
+def list_users_admin(
+	db: Session = Depends(get_db),
+	admin_user: models.User = Depends(require_admin),
+	page: int = Query(1, ge=1),
+	limit: int = Query(10, ge=1, le=100),
+	search: str | None = Query(None),
+):
+	return users_service.list_users_admin(db, page, limit, search)
 
 @router.get("/metrics")
 def get_user_metrics(
