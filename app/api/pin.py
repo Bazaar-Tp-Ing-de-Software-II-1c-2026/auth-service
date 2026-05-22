@@ -17,7 +17,7 @@ def setup_pin(
 ):
     """
     Configure PIN authentication for the current user on a specific device.
-    
+
     **CA 1: Configuración del PIN**
     - Requires authentication
     - PIN must be 6-8 digits
@@ -34,16 +34,16 @@ def login_with_pin(
 ):
     """
     Authenticate using PIN (device-specific).
-    
+
     **CA 2: Autenticación con PIN**
     - No authentication required (this IS the authentication)
     - Validates PIN and device_id
     - Returns JWT token on success
-    
+
     **CA 3: PIN incorrecto**
     - Tracks failed attempts
     - Locks after 5 failed attempts for 30 minutes
-    
+
     **CA 4: PIN ligado al dispositivo**
     - Only works on the device where PIN was configured
     """
@@ -58,7 +58,7 @@ def get_pin_status(
 ):
     """
     Get PIN configuration status for the current user.
-    
+
     Returns whether user has PIN configured and on which device.
     """
     logger.info(f"[PIN API] Get PIN status for user_id={current_user.id}")
@@ -73,10 +73,8 @@ def remove_pin(
 ):
     """
     Remove PIN configuration for the current user.
-    
+
     Requires device_id to match for security.
     """
     logger.info(f"[PIN API] Remove PIN request from user_id={current_user.id}")
     return pin_service.remove_pin(current_user.id, payload, db)
-
-

@@ -4,7 +4,7 @@ from app.config import settings
 from .email_templates import (
     get_verification_email_html,
     get_reset_password_email_html,
-    get_welcome_email_html
+    get_welcome_email_html,
 )
 
 try:
@@ -18,68 +18,64 @@ def send_email_html(
 ):
     """Send email using Resend API"""
     api_key = settings.RESEND_API_KEY
-    
+
     if not api_key:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="RESEND_API_KEY is not configured"
+            detail="RESEND_API_KEY is not configured",
         )
-    
+
     if not resend:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="resend library is not installed"
+            detail="resend library is not installed",
         )
-    
+
     resend.api_key = api_key
     from_email = settings.EMAIL_FROM
-    
+
     try:
-        r = resend.Emails.send({
-            "from": from_email,
-            "to": to_email,
-            "subject": subject,
-            "html": html_body,
-            "text": text_fallback or "Your email client does not support HTML."
-        })
-        
+        r = resend.Emails.send(
+            {
+                "from": from_email,
+                "to": to_email,
+                "subject": subject,
+                "html": html_body,
+                "text": text_fallback or "Your email client does not support HTML.",
+            }
+        )
+
         if r.get("id"):
             print(f"[MAIL] Email enviado exitosamente: {r['id']}")
         else:
             error_msg = r.get("message", "Error desconocido")
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
-                detail=f"Error sending email: {error_msg}"
+                detail=f"Error sending email: {error_msg}",
             )
     except Exception as e:
         print(f"[MAIL] Error: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Error sending email: {str(e)}"
+            detail=f"Error sending email: {str(e)}",
         )
 
 
-def send_verification_email(
-    to_email: str, username: str, verification_code: str
-):
+def send_verification_email(to_email: str, username: str, verification_code: str):
     """Enviar email de verificación con código personalizado"""
     html_content = get_verification_email_html(username, verification_code)
     send_email_html(
-        to_email=to_email,
-        subject="Verifica tu cuenta - Bazaar",
-        html_body=html_content
+        to_email=to_email, subject="Verifica tu cuenta - Bazaar", html_body=html_content
     )
 
 
-def send_reset_password_email(
-    to_email: str, username: str, reset_code: str
-):
+def send_reset_password_email(to_email: str, username: str, reset_code: str):
     """Enviar email de reseteo de contraseña con código personalizado"""
     html_content = get_reset_password_email_html(username, reset_code)
     send_email_html(
         to_email=to_email,
         subject="Restablecer tu contraseña - Bazaar",
-        html_body=html_content
+        html_body=html_content,
     )
 
 
@@ -87,7 +83,5 @@ def send_welcome_email(to_email: str, username: str):
     """Enviar email de bienvenida (opcional)"""
     html_content = get_welcome_email_html(username)
     send_email_html(
-        to_email=to_email,
-        subject="¡Bienvenido a Bazaar!",
-        html_body=html_content
+        to_email=to_email, subject="¡Bienvenido a Bazaar!", html_body=html_content
     )
