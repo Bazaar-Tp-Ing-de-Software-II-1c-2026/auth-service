@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
 
+from fastapi import APIRouter, Depends, Query
 from urllib.parse import unquote
 
 # from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import date
 
 from app import models, schemas
 from app.api.dependencies import get_current_user
@@ -41,4 +42,12 @@ def generate_upload_url(
     content_type: str,
     current_user: models.User = Depends(get_current_user),
 ):
-    return users_service.generate_upload_url(content_type, current_user)
+	return users_service.generate_upload_url(content_type, current_user)
+
+@router.get("/metrics")
+def get_user_metrics(
+    db: Session = Depends(get_db),
+    start_date: date = Query(..., alias="from"),
+    end_date: date = Query(..., alias="to"),
+):
+    return users_service.get_user_metrics(db, start_date, end_date)
