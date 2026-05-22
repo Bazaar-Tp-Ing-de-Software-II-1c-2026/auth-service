@@ -32,7 +32,6 @@ def update_my_profile(
     return users_service.update_my_profile(payload, db, current_user)
 
 
-
 @router.get("", response_model=schemas.PaginatedAdminUsersResponse)
 def list_users_admin(
 	db: Session = Depends(get_db),
@@ -43,10 +42,13 @@ def list_users_admin(
 ):
 	return users_service.list_users_admin(db, page, limit, search)
 
-@router.get("/{id}", response_model=schemas.UserPublicOut)
-def get_user_public_profile_by_id(id: int, db: Session = Depends(get_db)):
-    return users_service.get_user_public_profile_by_id(id, db)
-
+@router.get("/metrics")
+def get_user_metrics(
+    db: Session = Depends(get_db),
+    start_date: date = Query(..., alias="from"),
+    end_date: date = Query(..., alias="to"),
+):
+    return users_service.get_user_metrics(db, start_date, end_date)
 
 @router.post("/me/upload-url")
 def generate_upload_url(
@@ -55,10 +57,6 @@ def generate_upload_url(
 ):
 	return users_service.generate_upload_url(content_type, current_user)
 
-@router.get("/metrics")
-def get_user_metrics(
-    db: Session = Depends(get_db),
-    start_date: date = Query(..., alias="from"),
-    end_date: date = Query(..., alias="to"),
-):
-    return users_service.get_user_metrics(db, start_date, end_date)
+@router.get("/{id}", response_model=schemas.UserPublicOut)
+def get_user_public_profile_by_id(id: int, db: Session = Depends(get_db)):
+    return users_service.get_user_public_profile_by_id(id, db)

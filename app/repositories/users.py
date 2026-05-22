@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
+from sqlalchemy import func, cast, Date, or_
 from datetime import date
 
 from app import models
@@ -26,10 +26,10 @@ def count_total_users(db: Session):
 
 def get_users_timeline(db: Session, start_date: date, end_date: date):
     return (
-        db.query(func.date(models.User.created_at).label("date"), func.count(models.User.id).label("count"))
-        .filter(models.User.created_at >= start_date, models.User.created_at <= end_date)
-        .group_by(func.date(models.User.created_at))
-        .order_by(func.date(models.User.created_at))
+        db.query(cast(models.User.created_at, Date).label("date"), func.count(models.User.id).label("count"))
+        .filter(cast(models.User.created_at, Date) >= start_date, cast(models.User.created_at, Date) <= end_date)
+        .group_by(cast(models.User.created_at, Date))
+        .order_by(cast(models.User.created_at, Date))
         .all()
     )
 
