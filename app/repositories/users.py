@@ -25,9 +25,14 @@ def count_total_users(db: Session):
 
 
 def get_users_timeline(db: Session, start_date: date, end_date: date):
+    from datetime import datetime, time
+    # Convertir date a datetime para la comparación
+    start_datetime = datetime.combine(start_date, time.min)
+    end_datetime = datetime.combine(end_date, time.max)
+    
     return (
         db.query(func.date(models.User.created_at).label("date"), func.count(models.User.id).label("count"))
-        .filter(models.User.created_at >= start_date, models.User.created_at <= end_date)
+        .filter(models.User.created_at >= start_datetime, models.User.created_at <= end_datetime)
         .group_by(func.date(models.User.created_at))
         .order_by(func.date(models.User.created_at))
         .all()
