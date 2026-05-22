@@ -60,3 +60,21 @@ def generate_upload_url(
 @router.get("/{id}", response_model=schemas.UserPublicOut)
 def get_user_public_profile_by_id(id: int, db: Session = Depends(get_db)):
     return users_service.get_user_public_profile_by_id(id, db)
+
+
+@router.post("/{id}/block")
+def block_user(
+    id: int,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(require_admin),
+):
+    return users_service.block_user(db, id, admin_user)
+
+
+@router.post("/{id}/unblock")
+def unblock_user(
+    id: int,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(require_admin),
+):
+    return users_service.unblock_user(db, id, admin_user)
