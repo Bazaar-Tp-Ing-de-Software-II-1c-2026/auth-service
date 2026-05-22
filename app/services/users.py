@@ -132,18 +132,29 @@ def generate_upload_url(content_type: str, current_user: models.User):
 
 
 def get_user_metrics(db: Session, start_date: date, end_date: date):
-    total_users = count_total_users(db)
-    timeline = get_users_timeline(db, start_date, end_date)
+    try:
+        total_users = count_total_users(db)
+        timeline = get_users_timeline(db, start_date, end_date)
 
-    users_in_period = 0
-    formatted_timeline = []
+        users_in_period = 0
+        formatted_timeline = []
 
-    for entry in timeline:
-        users_in_period += entry.count
-        formatted_timeline.append({"date": str(entry.date), "count": entry.count})
+        # Usamos unpacking (row_date, row_count) para evitar el conflicto con tuple.count()
+        for row_date, row_count in timeline:
+            users_in_period += row_count
+            formatted_timeline.append({"date": str(row_date), "count": row_count})
 
-    return {
-        "totalUsers": total_users,
-        "usersInPeriod": users_in_period,
-        "timeline": formatted_timeline,
-    }
+        logger.info(f"[USER METRICS] Métricas obtenidas: total_users={total_users}, users_in_period={users_in_period}, timeline_count={len(formatted_timeline)}")
+        
+        return {
+            "totalUsers": total_users,
+            "usersInPeriod": users_in_period,
+            "timeline": formatted_timeline,
+        }
+    except Exception as e:
+        logger.error(f"[USER METRICS] Error obteniendo métricas: start_date={start_date}, end_date={end_date}, error={e}")
+        raise ServiceException(
+            status_code=500,
+            title="Internal Server Error",
+            detail=f"Error fetching user metrics: {str(e)}",
+        )
