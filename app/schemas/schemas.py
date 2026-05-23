@@ -167,6 +167,11 @@ class UserBase(BaseModel):
     shipping_phone: Optional[str] = None
 
 
+class UserPublicOut(UserBase):
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
 class UserOut(UserBase):
     id: int
     email: EmailStr
@@ -193,9 +198,6 @@ class PaginatedAdminUsersResponse(BaseModel):
     page: int
     limit: int
 
-
-class UserPublicOut(UserBase):
-    model_config = ConfigDict(from_attributes=True)
 
 
 class UserUpdate(BaseModel):
