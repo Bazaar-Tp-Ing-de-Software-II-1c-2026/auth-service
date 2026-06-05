@@ -8,7 +8,10 @@ from ..schemas.address import (
     AddressOut,
     AddressUpdate,
     AddressListResponse,
+    AddressValidationRequest,
+    AddressValidationResponse
 )
+from ..services.geocoding_service import validate_address
 from .dependencies import get_current_user, get_db
 from ..models import User
 
@@ -36,23 +39,39 @@ async def create_address(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Create a new address for the current user"""
+    # Validar dirección
+    validation_result = validate_address(
+        address=address_data.address,
+        city=address_data.city,
+        state=address_data.state,
+        country=address_data.country,
+    )
+
+    if not validation_result:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The address could not be verified. Please check the information entered.",
+        )
 
     # If this is set as default, remove default from other addresses
     if address_data.is_default:
-        db.query(UserAddress).filter(UserAddress.user_id == current_user.id).update(
-            {"is_default": False}
-        )
+        db.query(UserAddress).filter(
+            UserAddress.user_id == current_user.id
+        ).update({"is_default": False})
 
-    # If this is the first address, make it default automatically
     existing_count = (
-        db.query(UserAddress).filter(UserAddress.user_id == current_user.id).count()
+        db.query(UserAddress)
+        .filter(UserAddress.user_id == current_user.id)
+        .count()
     )
 
     if existing_count == 0:
         address_data.is_default = True
 
-    new_address = UserAddress(**address_data.model_dump(), user_id=current_user.id)
+    new_address = UserAddress(
+        **address_data.model_dump(),
+        user_id=current_user.id,
+    )
 
     db.add(new_address)
     db.commit()
