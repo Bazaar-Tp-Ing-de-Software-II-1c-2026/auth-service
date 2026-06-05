@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict, field_validator
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class AddressBase(BaseModel):
@@ -18,8 +19,10 @@ class AddressBase(BaseModel):
     def validate_required_fields(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError("This field cannot be empty")
+
         if len(v) > 200:
             raise ValueError("Field is too long")
+
         return v.strip()
 
     @field_validator("postal_code")
@@ -27,20 +30,26 @@ class AddressBase(BaseModel):
     def validate_postal_code(cls, v: str) -> str:
         if not v or not v.strip():
             raise ValueError("Postal code cannot be empty")
+
         if len(v) > 20:
             raise ValueError("Postal code is too long")
+
         return v.strip()
 
     @field_validator("phone")
     @classmethod
     def validate_phone(cls, v: Optional[str]) -> Optional[str]:
         if v is None:
-            return v
+            return None
+
         v = v.strip()
+
         if not v:
             return None
+
         if len(v) > 20:
             raise ValueError("Phone number is too long")
+
         return v
 
 
@@ -58,10 +67,47 @@ class AddressUpdate(BaseModel):
     phone: Optional[str] = None
     is_default: Optional[bool] = None
 
+    @field_validator(
+        "name",
+        "address",
+        "city",
+        "state",
+        "postal_code",
+        "country",
+        mode="before",
+    )
+    @classmethod
+    def strip_strings(cls, v):
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return None
+
+        v = v.strip()
+
+        if not v:
+            return None
+
+        if len(v) > 20:
+            raise ValueError("Phone number is too long")
+
+        return v
+
 
 class AddressOut(AddressBase):
     id: int
     user_id: int
+
+    # Datos de geocoding
+    formatted_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+
     created_at: datetime
     updated_at: datetime
 
@@ -71,3 +117,17 @@ class AddressOut(AddressBase):
 class AddressListResponse(BaseModel):
     data: list[AddressOut]
     total: int
+
+
+class AddressValidationRequest(BaseModel):
+    address: str
+    city: str
+    state: str
+    country: str
+
+
+class AddressValidationResponse(BaseModel):
+    valid: bool
+    formatted_address: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
