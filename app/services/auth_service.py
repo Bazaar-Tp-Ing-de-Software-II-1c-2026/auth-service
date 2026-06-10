@@ -80,6 +80,40 @@ def _send_welcome_email_safe(user: models.User) -> None:
     except Exception as e:
         logger.warning(f"[AUTH] Error enviando email de bienvenida a {user.email}: {e}")
 
+def _authenticate_user(payload: schemas.UserLogin, db: Session):
+    logger.debug(f"[AUTH ROUTER] Intento de login: identifier={payload.identifier}")
+
+    user = auth_repository.get_user_by_identifier(db, payload.identifier)
+
+    if not user:
+        raise ServiceException(
+            status_code=404,
+            title="Not Found",
+            detail="User not found. If you do not have an account, please register first.",
+        )
+
+    if user.blocked:
+        raise ServiceException(
+            status_code=403,
+            title="Forbidden",
+            detail="Your account has been blocked.",
+        )
+
+    if not settings.SKIP_EMAIL_VERIFICATION and not user.is_verified:
+        raise ServiceException(
+            status_code=403,
+            title="Forbidden",
+            detail="Please verify your email before logging in.",
+        )
+
+    if not security.verify_password(payload.password, user.hashed_password):
+        raise ServiceException(
+            status_code=401,
+            title="Unauthorized",
+            detail="Invalid username or password.",
+        )
+
+    return user
 
 def register(payload: schemas.UserCreate, db: Session):
     logger.debug(
@@ -127,40 +161,42 @@ def register(payload: schemas.UserCreate, db: Session):
 def login(payload: schemas.UserLogin, db: Session):
     logger.debug(f"[AUTH ROUTER] Intento de login: identifier={payload.identifier}")
 
-    user = auth_repository.get_user_by_identifier(db, payload.identifier)
-
-    if not user:
-        raise ServiceException(
-            status_code=404,
-            title="Not Found",
-            detail="User not found. If you do not have an account, please register first.",
-        )
-
-    if user.blocked:
-        raise ServiceException(
-            status_code=403, title="Forbidden", detail="Your account has been blocked."
-        )
-
-    # Skip email verification check in development mode
-    if not settings.SKIP_EMAIL_VERIFICATION and not user.is_verified:
-        raise ServiceException(
-            status_code=403,
-            title="Forbidden",
-            detail="Please verify your email before logging in.",
-        )
-
-    if not security.verify_password(payload.password, user.hashed_password):
-        raise ServiceException(
-            status_code=401,
-            title="Unauthorized",
-            detail="Invalid username or password.",
-        )
+    user = _authenticate_user(payload, db)
 
     token = security.create_access_token(
-        {"sub": str(user.id), "email": user.email, "username": user.username}
+        {"sub": str(user.id), "email": user.email, "username": user.username, "role": user.role}
     )
     logger.info(f"[AUTH ROUTER] Login EXITOSO: id={user.id}, username={user.username}")
     return {"access_token": token, "token_type": "bearer"}
+      
+
+def admin_login(payload: schemas.UserLogin, db: Session):
+    user = _authenticate_user(payload, db)
+
+    if user.role != "admin":
+        raise ServiceException(
+            status_code=403,
+            title="Forbidden",
+            detail="Admin access required.",
+        )
+
+    token = security.create_access_token(
+        {
+            "sub": str(user.id),
+            "email": user.email,
+            "username": user.username,
+            "role": user.role,
+        }
+    )
+
+    logger.info(
+        f"[AUTH ROUTER] ADMIN LOGIN EXITOSO: id={user.id}, username={user.username}"
+    )
+
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+    }
 
 
 def google_login(payload: schemas.GoogleLoginRequest, db: Session):
@@ -249,7 +285,7 @@ def google_login(payload: schemas.GoogleLoginRequest, db: Session):
     db.refresh(user)
 
     token = security.create_access_token(
-        {"sub": str(user.id), "email": user.email, "username": user.username}
+        {"sub": str(user.id), "email": user.email, "username": user.username, "role": user.role}
     )
     logger.info(f"[AUTH ROUTER] Google login EXITOSO: id={user.id}, email={user.email}")
     return {"access_token": token, "token_type": "bearer"}

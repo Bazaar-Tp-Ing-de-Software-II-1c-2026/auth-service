@@ -34,7 +34,14 @@ def get_users_timeline(db: Session, start_date: date, end_date: date):
     )
 
 
-def get_users_paginated(db: Session, page: int, limit: int, search: str | None = None):
+def get_users_paginated(
+    db: Session,
+    page: int,
+    limit: int,
+    search: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+):
     query = db.query(models.User)
 
     if search:
@@ -46,6 +53,16 @@ def get_users_paginated(db: Session, page: int, limit: int, search: str | None =
                 models.User.first_name.ilike(search_term),
                 models.User.last_name.ilike(search_term),
             )
+        )
+
+    if start_date:
+        query = query.filter(
+            cast(models.User.created_at, Date) >= start_date
+        )
+
+    if end_date:
+        query = query.filter(
+            cast(models.User.created_at, Date) <= end_date
         )
 
     total = query.count()
