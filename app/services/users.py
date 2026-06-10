@@ -183,8 +183,8 @@ def get_user_metrics(db: Session, start_date: date, end_date: date):
         )
 
 
-def list_users_admin(db: Session, page: int, limit: int, search: str | None = None):
-    users, total = get_users_paginated(db, page, limit, search)
+def list_users_admin(db: Session, page: int, limit: int, search: str | None = None, start_date: date | None = None, end_date: date | None = None):
+    users, total = get_users_paginated(db, page, limit, search, start_date, end_date)
 
     data = []
     for user in users:
@@ -196,6 +196,7 @@ def list_users_admin(db: Session, page: int, limit: int, search: str | None = No
                 "email": user.email,
                 "created_at": user.created_at,
                 "status": "bloqueado" if user.blocked else "activo",
+                "profile_picture_url": user.profile_picture_url,
             }
         )
 
@@ -288,3 +289,48 @@ def unblock_user(db: Session, user_id: int, admin_user: models.User):
 
     logger.info(f"[USER ROUTER] Usuario desbloqueado: user_id={user.id} by admin_id={admin_user.id}")
     return {"message": "User unblocked successfully."}
+
+
+def promote_to_admin(
+    db: Session,
+    user_id: int,
+    admin_user: models.User,
+):
+    logger.debug(f"[USER ROUTER] Admin {admin_user.id} promoting user {user_id} to admin")
+
+    if admin_user.id == user_id:
+        raise ServiceException(
+            status_code=400,
+            title="Bad Request",
+            detail="You cannot promote yourself.",
+        )
+
+    user = users_repository.get_user_by_id(db, user_id)
+    if not user:
+        raise ServiceException(
+            status_code=404,
+            title="Not Found",
+            detail="User not found.",
+        )
+
+    if user.role == "admin":
+        return {"message": "User is already admin."}
+
+    user.role = "admin"
+
+    try:
+        users_repository.save_user(db, user)
+    except Exception as e:
+        db.rollback()
+        logger.error(f"[USER ROUTER] Error promoting user_id={user_id}: {e}")
+        raise ServiceException(
+            status_code=500,
+            title="Internal Server Error",
+            detail="Error promoting user to admin.",
+        )
+
+    logger.info(
+        f"[USER ROUTER] User promoted to admin: user_id={user.id} by admin_id={admin_user.id}"
+    )
+
+    return {"message": "User promoted to admin successfully."}

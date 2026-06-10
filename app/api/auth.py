@@ -33,6 +33,9 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
 def login(payload: UserLogin, db: Session = Depends(get_db)):
     return auth_service.login(payload, db)
 
+@router.post("/admin/login", response_model=Token)
+def admin_login(payload: UserLogin, db: Session = Depends(get_db)):
+    return auth_service.admin_login(payload, db)
 
 @router.get("/me", response_model=UserOut)
 def get_current_user_info(current_user: models.User = Depends(get_current_user)):

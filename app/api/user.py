@@ -39,16 +39,27 @@ def list_users_admin(
 	page: int = Query(1, ge=1),
 	limit: int = Query(10, ge=1, le=100),
 	search: str | None = Query(None),
+    start_date: date | None = Query(None),
+    end_date: date | None = Query(None),
 ):
-	return users_service.list_users_admin(db, page, limit, search)
+	return users_service.list_users_admin(db, page, limit, search, start_date, end_date)
 
 @router.get("/metrics")
 def get_user_metrics(
     db: Session = Depends(get_db),
+    admin_user: models.User = Depends(require_admin),
     start_date: date = Query(..., alias="from"),
     end_date: date = Query(..., alias="to"),
 ):
     return users_service.get_user_metrics(db, start_date, end_date)
+
+@router.patch("/{id}/promote-to-admin")
+def promote_to_admin(
+    id: int,
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(require_admin),
+):
+    return users_service.promote_to_admin(db, id, admin_user)
 
 @router.post("/me/upload-url")
 def generate_upload_url(
