@@ -188,7 +188,7 @@ class AdminUserListItem(BaseModel):
     email: EmailStr
     created_at: datetime
     status: str
-    role: str
+    role: Optional[str] = "user"
     model_config = ConfigDict(from_attributes=True)
 
 
