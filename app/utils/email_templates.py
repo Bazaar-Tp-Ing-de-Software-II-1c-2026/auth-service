@@ -264,7 +264,6 @@ def get_reset_password_email_html(username: str, reset_code: str) -> str:
       
       <div class="code-box">
         <span class="code-text">{reset_code}</span>
-        <span class="copy-icon">📋</span>
       </div>
       
       <div class="expiration">
