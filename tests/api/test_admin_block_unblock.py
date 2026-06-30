@@ -1,13 +1,17 @@
 from app.security import create_access_token
 from app.models import User
-
+from unittest.mock import patch
 
 class TestAdminBlockUnblock:
     def test_admin_can_block_user(self, client, db, test_user, test_admin):
         token = create_access_token({"sub": str(test_admin.id)})
         headers = {"Authorization": f"Bearer {token}"}
 
-        response = client.post(f"/api/users/{test_user.id}/block", headers=headers)
+        with patch("app.services.users._notify_product_service_block"):
+            response = client.post(
+                f"/api/users/{test_user.id}/block",
+                headers=headers,
+            )
 
         assert response.status_code == 200
         assert "blocked" in response.json()["message"].lower()
@@ -33,7 +37,11 @@ class TestAdminBlockUnblock:
         token = create_access_token({"sub": str(test_admin.id)})
         headers = {"Authorization": f"Bearer {token}"}
 
-        response = client.post(f"/api/users/{test_user.id}/unblock", headers=headers)
+        with patch("app.services.users._notify_product_service_unblock"):
+            response = client.post(
+                f"/api/users/{test_user.id}/unblock",
+                headers=headers,
+            )
 
         assert response.status_code == 200
         assert "unblocked" in response.json()["message"].lower()
