@@ -196,7 +196,8 @@ def list_users_admin(db: Session, page: int, limit: int, search: str | None = No
                 "email": user.email,
                 "created_at": user.created_at,
                 "status": "bloqueado" if user.blocked else "activo",
-                "profile_picture_url": user.profile_picture_url,
+                "role": user.role,
+                "profile_picture_url": user.profile_picture_url or None,
             }
         )
 
