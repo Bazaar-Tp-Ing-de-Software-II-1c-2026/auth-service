@@ -158,6 +158,39 @@ def register(payload: schemas.UserCreate, db: Session):
     return user
 
 
+def register_admin(payload: schemas.UserCreate, db: Session):
+    logger.debug(
+        f"[AUTH ROUTER] Intento de registro admin: email={payload.email}, username={payload.username}"
+    )
+
+    if auth_repository.get_user_by_email(db, payload.email):
+        raise ServiceException(
+            status_code=400, title="Bad Request", detail="Email is already registered."
+        )
+
+    user = models.User(
+        email=payload.email,
+        username=payload.username,
+        hashed_password=security.hash_password(payload.password),
+        first_name=payload.first_name,
+        last_name=payload.last_name,
+        role="admin",
+        is_verified=True,
+    )
+
+    try:
+        auth_repository.create_user(db, user)
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
+    db.refresh(user)
+    logger.info(
+        f"[AUTH ROUTER] Admin registrado EXITOSAMENTE: id={user.id}, email={user.email}"
+    )
+    return user
+
 def login(payload: schemas.UserLogin, db: Session):
     logger.debug(f"[AUTH ROUTER] Intento de login: identifier={payload.identifier}")
 
