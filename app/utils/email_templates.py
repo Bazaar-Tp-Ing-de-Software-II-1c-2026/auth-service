@@ -75,7 +75,7 @@ def get_verification_email_html(username: str, verification_code: str) -> str:
       font-weight: bold;
       color: {BAZAAR_PRIMARY_COLOR};
       letter-spacing: 2px;
-      font-family: 'Courier New', monospace;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     }}
     .copy-icon {{
       cursor: pointer;
@@ -215,7 +215,7 @@ def get_reset_password_email_html(username: str, reset_code: str) -> str:
       font-weight: bold;
       color: {BAZAAR_PRIMARY_COLOR};
       letter-spacing: 2px;
-      font-family: 'Courier New', monospace;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     }}
     .copy-icon {{
       cursor: pointer;
