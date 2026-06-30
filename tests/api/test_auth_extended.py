@@ -317,8 +317,16 @@ class TestResetAndForgotPasswordEndpoints:
 
 class TestGoogleLoginEndpoint:
     def test_google_login_without_client_ids(self, client, monkeypatch):
-        monkeypatch.delenv("GOOGLE_CLIENT_ID_WEB", raising=False)
-        monkeypatch.delenv("GOOGLE_CLIENT_ID_ANDROID", raising=False)
+        monkeypatch.setattr(
+            auth_service_module.settings,
+            "GOOGLE_CLIENT_ID_WEB",
+            "",
+        )
+        monkeypatch.setattr(
+            auth_service_module.settings,
+            "GOOGLE_CLIENT_ID_ANDROID",
+            "",
+        )
 
         response = client.post("/api/auth/google-login", json={"id_token": "token"})
         assert response.status_code == 500
