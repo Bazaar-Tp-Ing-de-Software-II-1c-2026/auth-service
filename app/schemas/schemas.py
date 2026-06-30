@@ -189,6 +189,7 @@ class AdminUserListItem(BaseModel):
     created_at: datetime
     status: str
     role: Optional[str] = "user"
+    profile_picture_url: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 
