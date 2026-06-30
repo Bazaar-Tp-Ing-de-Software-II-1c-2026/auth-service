@@ -14,8 +14,14 @@ from app import models, schemas
 from app.api.dependencies import get_current_user, require_admin
 from app.database import get_db
 from app.services import users as users_service
+from app.services import auth_service
 
 router = APIRouter(prefix="/api/users", tags=["users"])
+
+
+@router.post("/create-admin", response_model=schemas.UserOut, status_code=201)
+def create_admin(payload: schemas.UserCreate, db: Session = Depends(get_db)):
+    return auth_service.register_admin(payload, db)
 
 
 @router.get("/me", response_model=schemas.UserOut)
@@ -53,7 +59,7 @@ def get_user_metrics(
 ):
     return users_service.get_user_metrics(db, start_date, end_date)
 
-@router.patch("/{id}/promote-to-admin")
+@router.put("/{id}/promote-to-admin")
 def promote_to_admin(
     id: int,
     db: Session = Depends(get_db),
