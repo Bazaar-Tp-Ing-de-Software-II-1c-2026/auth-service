@@ -1,5 +1,5 @@
 """
-Templates de email personalizados para Bazaar
+Custom email templates for Bazaar
 """
 
 BAZAAR_PRIMARY_COLOR = "#E6A500"
@@ -7,7 +7,7 @@ BAZAAR_LOGO_URL = "https://bazaar-app-bucket.s3.amazonaws.com/logo.png"
 
 
 def get_verification_email_html(username: str, verification_code: str) -> str:
-    """Template para verificación de email con código"""
+    """Template for email verification with code"""
     return f"""
 <!DOCTYPE html>
 <html>
@@ -114,11 +114,11 @@ def get_verification_email_html(username: str, verification_code: str) -> str:
     </div>
     
     <div class="content">
-      <div class="greeting">¡Hola {username}!</div>
+      <div class="greeting">Hi {username}!</div>
       
       <div class="message">
-        <p>Gracias por registrarte en <strong>Bazaar</strong>.</p>
-        <p>Usa el código de abajo para verificar tu correo y activar tu cuenta.</p>
+        <p>Thank you for signing up for <strong>Bazaar</strong>.</p>
+        <p>Use the code below to verify your email and activate your account.</p>
       </div>
       
       <div class="code-box">
@@ -127,18 +127,18 @@ def get_verification_email_html(username: str, verification_code: str) -> str:
       </div>
       
       <div class="expiration">
-        ⏱️ Este código expira en 1 hora
+        ⏱️ This code expires in 1 hour
       </div>
       
       <div class="security-note">
-        <strong>¿No solicitaste este correo?</strong><br>
-        Si no creaste esta cuenta, simplemente ignora este mensaje. Tu seguridad es importante para nosotros.
+        <strong>Didn't request this email?</strong><br>
+        If you didn't create this account, simply ignore this message. Your security is important to us.
       </div>
     </div>
     
     <div class="footer">
-      <p>&copy; 2026 Bazaar. Todos los derechos reservados.</p>
-      <p>¿Preguntas? Contáctanos en support@bazaar.app</p>
+      <p>&copy; 2026 Bazaar. All rights reserved.</p>
+      <p>Questions? Contact us at support@bazaar.app</p>
     </div>
   </div>
 </body>
@@ -147,7 +147,7 @@ def get_verification_email_html(username: str, verification_code: str) -> str:
 
 
 def get_reset_password_email_html(username: str, reset_code: str) -> str:
-    """Template para reseteo de contraseña con código"""
+    """Template for password reset with code"""
     return f"""
 <!DOCTYPE html>
 <html>
@@ -255,11 +255,11 @@ def get_reset_password_email_html(username: str, reset_code: str) -> str:
     </div>
     
     <div class="content">
-      <div class="greeting">Hola {username},</div>
+      <div class="greeting">Hi {username},</div>
       
       <div class="message">
-        <p>Recibimos una solicitud para restablecer tu contraseña.</p>
-        <p>Usa el código de abajo para crear una nueva contraseña.</p>
+        <p>We received a request to reset your password.</p>
+        <p>Use the code below to set up a new password.</p>
       </div>
       
       <div class="code-box">
@@ -268,18 +268,18 @@ def get_reset_password_email_html(username: str, reset_code: str) -> str:
       </div>
       
       <div class="expiration">
-        ⏱️ Este código expira en 1 hora
+        ⏱️ This code expires in 1 hour
       </div>
       
       <div class="security-note">
-        <strong>⚠️ Por seguridad:</strong><br>
-        Si tú no solicitaste esto, ignora este correo. Tu cuenta permanecerá segura.
+        <strong>⚠️ For security:</strong><br>
+        If you didn't request this, please ignore this email. Your account will remain secure.
       </div>
     </div>
     
     <div class="footer">
-      <p>&copy; 2026 Bazaar. Todos los derechos reservados.</p>
-      <p>¿Preguntas? Contáctanos en support@bazaar.app</p>
+      <p>&copy; 2026 Bazaar. All rights reserved.</p>
+      <p>Questions? Contact us at support@bazaar.app</p>
     </div>
   </div>
 </body>
@@ -288,7 +288,7 @@ def get_reset_password_email_html(username: str, reset_code: str) -> str:
 
 
 def get_welcome_email_html(username: str) -> str:
-    """Template de bienvenida (opcional)"""
+    """Welcome template (optional)"""
     return f"""
 <!DOCTYPE html>
 <html>
@@ -375,24 +375,24 @@ def get_welcome_email_html(username: str) -> str:
     </div>
     
     <div class="content">
-      <div class="greeting">¡Bienvenido {username}!</div>
+      <div class="greeting">Welcome {username}!</div>
       
       <div class="message">
-        <p>Tu cuenta está verificada y lista para usar.</p>
-        <p>Estamos emocionados de tenerte en la comunidad Bazaar.</p>
+        <p>Your account is verified and ready to go.</p>
+        <p>We are thrilled to have you in the Bazaar community.</p>
       </div>
       
       <div class="features">
-        <div class="feature-item">Acceso ilimitado a todas las funcionalidades</div>
-        <div class="feature-item">Soporte al cliente 24/7</div>
-        <div class="feature-item">Sincronización en tiempo real</div>
-        <div class="feature-item">Seguridad de nivel empresarial</div>
+        <div class="feature-item">Unlimited access to all features</div>
+        <div class="feature-item">24/7 customer support</div>
+        <div class="feature-item">Real-time synchronization</div>
+        <div class="feature-item">Enterprise-grade security</div>
       </div>
     </div>
     
     <div class="footer">
-      <p>&copy; 2026 Bazaar. Todos los derechos reservados.</p>
-      <p>¿Preguntas? Contáctanos en support@bazaar.app</p>
+      <p>&copy; 2026 Bazaar. All rights reserved.</p>
+      <p>Questions? Contact us at support@bazaar.app</p>
     </div>
   </div>
 </body>
