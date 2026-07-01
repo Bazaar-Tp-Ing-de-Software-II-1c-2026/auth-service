@@ -23,7 +23,9 @@ class Settings(BaseSettings):
     RESEND_API_KEY: str = ""
     SKIP_EMAIL_VERIFICATION: bool = False
     PRODUCT_SERVICE_URL: str = ""
-    model_config = ConfigDict(extra="ignore", env_file=".env", env_file_encoding="utf-8")
+    model_config = ConfigDict(
+        extra="ignore", env_file=".env", env_file_encoding="utf-8"
+    )
 
 
 settings = Settings()

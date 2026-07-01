@@ -129,9 +129,13 @@ class TestUserExtraEndpoints:
         assert payload["limit"] == 2
         assert payload["total"] == 4
         assert len(payload["data"]) == 2
-        assert {"id", "name", "email", "created_at", "status"}.issubset(payload["data"][0].keys())
+        assert {"id", "name", "email", "created_at", "status"}.issubset(
+            payload["data"][0].keys()
+        )
 
-    def test_admin_list_users_filters_by_name_or_email(self, client, db, test_admin, test_user):
+    def test_admin_list_users_filters_by_name_or_email(
+        self, client, db, test_admin, test_user
+    ):
         matched_user = User(
             email="maria.garcia@example.com",
             username="mariag",

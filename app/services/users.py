@@ -13,7 +13,11 @@ from app.config import settings
 from app.exceptions.handler import ServiceException
 from app.repositories import users as users_repository
 from app.services.storage import get_s3_client
-from app.repositories.users import count_total_users, get_users_timeline, get_users_paginated
+from app.repositories.users import (
+    count_total_users,
+    get_users_timeline,
+    get_users_paginated,
+)
 
 
 def _notify_product_service_block(user_id: int) -> None:
@@ -150,8 +154,14 @@ def generate_upload_url(content_type: str, current_user: models.User):
         return {"upload_url": upload_url, "file_url": file_url}
 
     except Exception as e:
-        logger.error(f"[USER ROUTER] Error generando upload URL: user_id={current_user.id}, error={e}")
-        raise ServiceException(status_code=500, title="Internal Server Error", detail=f"Error generating presigned URL: {e}")
+        logger.error(
+            f"[USER ROUTER] Error generando upload URL: user_id={current_user.id}, error={e}"
+        )
+        raise ServiceException(
+            status_code=500,
+            title="Internal Server Error",
+            detail=f"Error generating presigned URL: {e}",
+        )
 
 
 def get_user_metrics(db: Session, start_date: date, end_date: date):
@@ -167,15 +177,19 @@ def get_user_metrics(db: Session, start_date: date, end_date: date):
             users_in_period += row_count
             formatted_timeline.append({"date": str(row_date), "count": row_count})
 
-        logger.info(f"[USER METRICS] Métricas obtenidas: total_users={total_users}, users_in_period={users_in_period}, timeline_count={len(formatted_timeline)}")
-        
+        logger.info(
+            f"[USER METRICS] Métricas obtenidas: total_users={total_users}, users_in_period={users_in_period}, timeline_count={len(formatted_timeline)}"
+        )
+
         return {
             "totalUsers": total_users,
             "usersInPeriod": users_in_period,
             "timeline": formatted_timeline,
         }
     except Exception as e:
-        logger.error(f"[USER METRICS] Error obteniendo métricas: start_date={start_date}, end_date={end_date}, error={e}")
+        logger.error(
+            f"[USER METRICS] Error obteniendo métricas: start_date={start_date}, end_date={end_date}, error={e}"
+        )
         raise ServiceException(
             status_code=500,
             title="Internal Server Error",
@@ -183,7 +197,14 @@ def get_user_metrics(db: Session, start_date: date, end_date: date):
         )
 
 
-def list_users_admin(db: Session, page: int, limit: int, search: str | None = None, start_date: date | None = None, end_date: date | None = None):
+def list_users_admin(
+    db: Session,
+    page: int,
+    limit: int,
+    search: str | None = None,
+    start_date: date | None = None,
+    end_date: date | None = None,
+):
     users, total = get_users_paginated(db, page, limit, search, start_date, end_date)
 
     data = []
@@ -220,7 +241,9 @@ def block_user(db: Session, user_id: int, admin_user: models.User):
 
     user = users_repository.get_user_by_id(db, user_id)
     if not user:
-        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
+        raise ServiceException(
+            status_code=404, title="Not Found", detail="User not found."
+        )
 
     if user.blocked:
         return {"message": "User is already blocked."}
@@ -231,7 +254,11 @@ def block_user(db: Session, user_id: int, admin_user: models.User):
     except Exception as e:
         db.rollback()
         logger.error(f"[USER ROUTER] Error bloqueando usuario user_id={user_id}: {e}")
-        raise ServiceException(status_code=500, title="Internal Server Error", detail="Error blocking user.")
+        raise ServiceException(
+            status_code=500,
+            title="Internal Server Error",
+            detail="Error blocking user.",
+        )
 
     try:
         _notify_product_service_block(user.id)
@@ -249,7 +276,9 @@ def block_user(db: Session, user_id: int, admin_user: models.User):
             detail="Failed to notify product-service about user block.",
         )
 
-    logger.info(f"[USER ROUTER] Usuario bloqueado: user_id={user.id} by admin_id={admin_user.id}")
+    logger.info(
+        f"[USER ROUTER] Usuario bloqueado: user_id={user.id} by admin_id={admin_user.id}"
+    )
     return {"message": "User blocked successfully."}
 
 
@@ -258,7 +287,9 @@ def unblock_user(db: Session, user_id: int, admin_user: models.User):
 
     user = users_repository.get_user_by_id(db, user_id)
     if not user:
-        raise ServiceException(status_code=404, title="Not Found", detail="User not found.")
+        raise ServiceException(
+            status_code=404, title="Not Found", detail="User not found."
+        )
 
     if not user.blocked:
         return {"message": "User is not blocked."}
@@ -268,8 +299,14 @@ def unblock_user(db: Session, user_id: int, admin_user: models.User):
         users_repository.save_user(db, user)
     except Exception as e:
         db.rollback()
-        logger.error(f"[USER ROUTER] Error desbloqueando usuario user_id={user_id}: {e}")
-        raise ServiceException(status_code=500, title="Internal Server Error", detail="Error unblocking user.")
+        logger.error(
+            f"[USER ROUTER] Error desbloqueando usuario user_id={user_id}: {e}"
+        )
+        raise ServiceException(
+            status_code=500,
+            title="Internal Server Error",
+            detail="Error unblocking user.",
+        )
 
     try:
         _notify_product_service_unblock(user.id)
@@ -287,7 +324,9 @@ def unblock_user(db: Session, user_id: int, admin_user: models.User):
             detail="Failed to notify product-service about user unblock.",
         )
 
-    logger.info(f"[USER ROUTER] Usuario desbloqueado: user_id={user.id} by admin_id={admin_user.id}")
+    logger.info(
+        f"[USER ROUTER] Usuario desbloqueado: user_id={user.id} by admin_id={admin_user.id}"
+    )
     return {"message": "User unblocked successfully."}
 
 
@@ -296,7 +335,9 @@ def promote_to_admin(
     user_id: int,
     admin_user: models.User,
 ):
-    logger.debug(f"[USER ROUTER] Admin {admin_user.id} promoting user {user_id} to admin")
+    logger.debug(
+        f"[USER ROUTER] Admin {admin_user.id} promoting user {user_id} to admin"
+    )
 
     if admin_user.id == user_id:
         raise ServiceException(
