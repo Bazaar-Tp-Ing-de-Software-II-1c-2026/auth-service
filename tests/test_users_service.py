@@ -259,14 +259,14 @@ class TestListUsersAdmin:
         db = MagicMock()
         with patch("app.services.users.get_users_paginated", return_value=([user], 1)):
             result = list_users_admin(db, page=1, limit=10)
-        assert result["data"][0]["status"] == "bloqueado"
+        assert result["data"][0]["status"] == "blocked"
 
     def test_active_user_has_status_activo(self):
         user = _make_user(id=1, first_name="Ana", last_name="Garcia", blocked=False)
         db = MagicMock()
         with patch("app.services.users.get_users_paginated", return_value=([user], 1)):
             result = list_users_admin(db, page=1, limit=10)
-        assert result["data"][0]["status"] == "activo"
+        assert result["data"][0]["status"] == "active"
 
     def test_empty_name_fallback_to_username(self):
         user = _make_user(id=1, first_name=None, last_name=None, username="johndoe", blocked=False)
