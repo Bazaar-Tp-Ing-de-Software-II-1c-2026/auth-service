@@ -317,15 +317,9 @@ class TestResetAndForgotPasswordEndpoints:
 
 class TestGoogleLoginEndpoint:
     def test_google_login_without_client_ids(self, client, monkeypatch):
+        monkeypatch.setattr(auth_service_module.settings, "GOOGLE_CLIENT_ID_WEB", "")
         monkeypatch.setattr(
-            auth_service_module.settings,
-            "GOOGLE_CLIENT_ID_WEB",
-            "",
-        )
-        monkeypatch.setattr(
-            auth_service_module.settings,
-            "GOOGLE_CLIENT_ID_ANDROID",
-            "",
+            auth_service_module.settings, "GOOGLE_CLIENT_ID_ANDROID", ""
         )
 
         response = client.post("/api/auth/google-login", json={"id_token": "token"})
