@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str = "dev-secret-change-me"
     JWT_EXPIRE_MIN: int = 360
 
+    PRODUCT_SERVICE_URL: str = ""
     GOOGLE_CLIENT_ID_WEB: str = ""
     GOOGLE_CLIENT_ID_ANDROID: str = ""
 
