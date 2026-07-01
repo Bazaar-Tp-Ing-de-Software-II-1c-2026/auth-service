@@ -1,13 +1,16 @@
 """
 Tests para app/api/addresses.py - actualmente con solo 30% de cobertura.
 """
+
 import pytest
 from fastapi.testclient import TestClient
 
 
 def _auth_headers(client, email="test@example.com", password="password123"):
     """Helper para obtener headers de auth."""
-    response = client.post("/api/auth/login", json={"identifier": email, "password": password})
+    response = client.post(
+        "/api/auth/login", json={"identifier": email, "password": password}
+    )
     if response.status_code == 200:
         token = response.json()["access_token"]
         return {"Authorization": f"Bearer {token}"}
@@ -50,14 +53,20 @@ class TestAddressesEndpoints:
     def test_create_first_address_becomes_default(self, client, test_user):
         headers = _auth_headers(client)
         # First address with is_default=False should still become default
-        response = client.post("/api/addresses", json=_addr(is_default=False), headers=headers)
+        response = client.post(
+            "/api/addresses", json=_addr(is_default=False), headers=headers
+        )
         assert response.status_code == 201
         assert response.json()["is_default"] is True
 
     def test_create_multiple_addresses(self, client, test_user):
         headers = _auth_headers(client)
         for i in range(3):
-            r = client.post("/api/addresses", json=_addr(address=f"Calle {i}", postal_code=f"100{i}"), headers=headers)
+            r = client.post(
+                "/api/addresses",
+                json=_addr(address=f"Calle {i}", postal_code=f"100{i}"),
+                headers=headers,
+            )
             assert r.status_code == 201
 
         response = client.get("/api/addresses", headers=headers)
@@ -84,7 +93,9 @@ class TestAddressesEndpoints:
         address_id = created["id"]
 
         update_data = {"address": "Nueva Dirección 999", "city": "Córdoba"}
-        response = client.patch(f"/api/addresses/{address_id}", json=update_data, headers=headers)
+        response = client.patch(
+            f"/api/addresses/{address_id}", json=update_data, headers=headers
+        )
         assert response.status_code == 200
         body = response.json()
         assert body["address"] == "Nueva Dirección 999"
@@ -92,15 +103,25 @@ class TestAddressesEndpoints:
 
     def test_update_address_not_found(self, client, test_user):
         headers = _auth_headers(client)
-        response = client.patch("/api/addresses/99999", json={"address": "X"}, headers=headers)
+        response = client.patch(
+            "/api/addresses/99999", json={"address": "X"}, headers=headers
+        )
         assert response.status_code == 404
 
     def test_update_address_set_as_default(self, client, test_user):
         headers = _auth_headers(client)
-        id1 = client.post("/api/addresses", json=_addr(name="Addr1"), headers=headers).json()["id"]
-        id2 = client.post("/api/addresses", json=_addr(name="Addr2", address="Calle 2", postal_code="2000"), headers=headers).json()["id"]
+        id1 = client.post(
+            "/api/addresses", json=_addr(name="Addr1"), headers=headers
+        ).json()["id"]
+        id2 = client.post(
+            "/api/addresses",
+            json=_addr(name="Addr2", address="Calle 2", postal_code="2000"),
+            headers=headers,
+        ).json()["id"]
 
-        response = client.patch(f"/api/addresses/{id2}", json={"is_default": True}, headers=headers)
+        response = client.patch(
+            f"/api/addresses/{id2}", json={"is_default": True}, headers=headers
+        )
         assert response.status_code == 200
         assert response.json()["is_default"] is True
 
@@ -122,8 +143,14 @@ class TestAddressesEndpoints:
 
     def test_delete_default_address_promotes_next(self, client, test_user):
         headers = _auth_headers(client)
-        id1 = client.post("/api/addresses", json=_addr(name="First"), headers=headers).json()["id"]
-        id2 = client.post("/api/addresses", json=_addr(name="Second", address="Other St", postal_code="9000"), headers=headers).json()["id"]
+        id1 = client.post(
+            "/api/addresses", json=_addr(name="First"), headers=headers
+        ).json()["id"]
+        id2 = client.post(
+            "/api/addresses",
+            json=_addr(name="Second", address="Other St", postal_code="9000"),
+            headers=headers,
+        ).json()["id"]
 
         # Delete the first (which is default as it was first)
         client.delete(f"/api/addresses/{id1}", headers=headers)
@@ -133,8 +160,14 @@ class TestAddressesEndpoints:
 
     def test_set_default_address(self, client, test_user):
         headers = _auth_headers(client)
-        id1 = client.post("/api/addresses", json=_addr(name="A1"), headers=headers).json()["id"]
-        id2 = client.post("/api/addresses", json=_addr(name="A2", address="Street 2", postal_code="2000"), headers=headers).json()["id"]
+        id1 = client.post(
+            "/api/addresses", json=_addr(name="A1"), headers=headers
+        ).json()["id"]
+        id2 = client.post(
+            "/api/addresses",
+            json=_addr(name="A2", address="Street 2", postal_code="2000"),
+            headers=headers,
+        ).json()["id"]
 
         response = client.post(f"/api/addresses/{id2}/set-default", headers=headers)
         assert response.status_code == 200
@@ -154,7 +187,16 @@ class TestAddressesEndpoints:
         # Create first address
         client.post("/api/addresses", json=_addr(name="First"), headers=headers)
         # Create second with is_default=True
-        response = client.post("/api/addresses", json=_addr(name="Second Default", address="Other 2", postal_code="2000", is_default=True), headers=headers)
+        response = client.post(
+            "/api/addresses",
+            json=_addr(
+                name="Second Default",
+                address="Other 2",
+                postal_code="2000",
+                is_default=True,
+            ),
+            headers=headers,
+        )
         assert response.status_code == 201
         assert response.json()["is_default"] is True
 

@@ -80,6 +80,7 @@ def _send_welcome_email_safe(user: models.User) -> None:
     except Exception as e:
         logger.warning(f"[AUTH] Error enviando email de bienvenida a {user.email}: {e}")
 
+
 def _authenticate_user(payload: schemas.UserLogin, db: Session):
     logger.debug(f"[AUTH ROUTER] Intento de login: identifier={payload.identifier}")
 
@@ -114,6 +115,7 @@ def _authenticate_user(payload: schemas.UserLogin, db: Session):
         )
 
     return user
+
 
 def register(payload: schemas.UserCreate, db: Session):
     logger.debug(
@@ -191,17 +193,23 @@ def register_admin(payload: schemas.UserCreate, db: Session):
     )
     return user
 
+
 def login(payload: schemas.UserLogin, db: Session):
     logger.debug(f"[AUTH ROUTER] Intento de login: identifier={payload.identifier}")
 
     user = _authenticate_user(payload, db)
 
     token = security.create_access_token(
-        {"sub": str(user.id), "email": user.email, "username": user.username, "role": user.role}
+        {
+            "sub": str(user.id),
+            "email": user.email,
+            "username": user.username,
+            "role": user.role,
+        }
     )
     logger.info(f"[AUTH ROUTER] Login EXITOSO: id={user.id}, username={user.username}")
     return {"access_token": token, "token_type": "bearer"}
-      
+
 
 def admin_login(payload: schemas.UserLogin, db: Session):
     user = _authenticate_user(payload, db)
@@ -318,7 +326,12 @@ def google_login(payload: schemas.GoogleLoginRequest, db: Session):
     db.refresh(user)
 
     token = security.create_access_token(
-        {"sub": str(user.id), "email": user.email, "username": user.username, "role": user.role}
+        {
+            "sub": str(user.id),
+            "email": user.email,
+            "username": user.username,
+            "role": user.role,
+        }
     )
     logger.info(f"[AUTH ROUTER] Google login EXITOSO: id={user.id}, email={user.email}")
     return {"access_token": token, "token_type": "bearer"}

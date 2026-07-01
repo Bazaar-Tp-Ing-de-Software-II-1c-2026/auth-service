@@ -3,9 +3,12 @@ from app.models import User
 from unittest.mock import patch
 from app.services import users as users_service
 
+
 class TestAdminBlockUnblock:
     def test_admin_can_block_user(self, client, db, test_user, test_admin, monkeypatch):
-        monkeypatch.setattr(users_service, "_notify_product_service_block", lambda user_id: None)
+        monkeypatch.setattr(
+            users_service, "_notify_product_service_block", lambda user_id: None
+        )
 
         token = create_access_token({"sub": str(test_admin.id)})
         headers = {"Authorization": f"Bearer {token}"}
@@ -31,13 +34,17 @@ class TestAdminBlockUnblock:
         assert response.status_code == 400
         assert "cannot" in response.json()["detail"].lower()
 
-    def test_admin_can_unblock_user(self, client, db, test_user, test_admin, monkeypatch):
+    def test_admin_can_unblock_user(
+        self, client, db, test_user, test_admin, monkeypatch
+    ):
         # pre-block the user
         test_user.blocked = True
         db.add(test_user)
         db.commit()
 
-        monkeypatch.setattr(users_service, "_notify_product_service_unblock", lambda user_id: None)
+        monkeypatch.setattr(
+            users_service, "_notify_product_service_unblock", lambda user_id: None
+        )
 
         token = create_access_token({"sub": str(test_admin.id)})
         headers = {"Authorization": f"Bearer {token}"}

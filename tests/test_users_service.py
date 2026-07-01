@@ -3,6 +3,7 @@ Tests unitarios para app/services/users.py.
 Cubre funciones como get_user_public_profile_by_id/username,
 block_user, unblock_user, update_my_profile, list_users_admin, get_user_metrics.
 """
+
 import pytest
 from unittest.mock import MagicMock, patch
 from app.services.users import (
@@ -49,13 +50,17 @@ class TestGetUserPublicProfileById:
     def test_returns_user_when_found_and_not_blocked(self):
         user = _make_user(id=1, blocked=False)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=user):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=user
+        ):
             result = get_user_public_profile_by_id(1, db)
         assert result is user
 
     def test_raises_404_when_user_not_found(self):
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=None):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=None
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 get_user_public_profile_by_id(999, db)
         assert exc_info.value.status_code == 404
@@ -63,7 +68,9 @@ class TestGetUserPublicProfileById:
     def test_raises_403_when_user_blocked(self):
         user = _make_user(id=1, blocked=True)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=user):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=user
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 get_user_public_profile_by_id(1, db)
         assert exc_info.value.status_code == 403
@@ -76,13 +83,19 @@ class TestGetUserPublicProfileByUsername:
     def test_returns_user_when_found_and_not_blocked(self):
         user = _make_user(username="alice", blocked=False)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_username", return_value=user):
+        with patch(
+            "app.services.users.users_repository.get_user_by_username",
+            return_value=user,
+        ):
             result = get_user_public_profile_by_username("alice", db)
         assert result is user
 
     def test_raises_404_when_not_found(self):
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_username", return_value=None):
+        with patch(
+            "app.services.users.users_repository.get_user_by_username",
+            return_value=None,
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 get_user_public_profile_by_username("ghost", db)
         assert exc_info.value.status_code == 404
@@ -90,7 +103,10 @@ class TestGetUserPublicProfileByUsername:
     def test_raises_403_when_blocked(self):
         user = _make_user(username="blockeduser", blocked=True)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_username", return_value=user):
+        with patch(
+            "app.services.users.users_repository.get_user_by_username",
+            return_value=user,
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 get_user_public_profile_by_username("blockeduser", db)
         assert exc_info.value.status_code == 403
@@ -106,6 +122,7 @@ class TestUpdateMyProfile:
 
         with patch("app.services.users.users_repository.save_user") as mock_save:
             from app.schemas.schemas import UserUpdate
+
             payload = UserUpdate(first_name="NewName")
             result = update_my_profile(payload, db, user)
             mock_save.assert_called_once()
@@ -115,8 +132,12 @@ class TestUpdateMyProfile:
         user = _make_user()
         db = MagicMock()
 
-        with patch("app.services.users.users_repository.save_user", side_effect=Exception("DB error")):
+        with patch(
+            "app.services.users.users_repository.save_user",
+            side_effect=Exception("DB error"),
+        ):
             from app.schemas.schemas import UserUpdate
+
             payload = UserUpdate(first_name="NewName")
             with pytest.raises(ServiceException) as exc_info:
                 update_my_profile(payload, db, user)
@@ -137,7 +158,9 @@ class TestBlockUser:
     def test_raises_404_when_user_not_found(self):
         admin = _make_user(id=99, role="admin")
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=None):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=None
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 block_user(db, user_id=1, admin_user=admin)
         assert exc_info.value.status_code == 404
@@ -146,7 +169,9 @@ class TestBlockUser:
         admin = _make_user(id=99, role="admin")
         user = _make_user(id=1, blocked=True)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=user):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=user
+        ):
             result = block_user(db, user_id=1, admin_user=admin)
         assert "already blocked" in result["message"].lower()
 
@@ -154,9 +179,11 @@ class TestBlockUser:
         admin = _make_user(id=99, role="admin")
         user = _make_user(id=1, blocked=False)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=user), \
-             patch("app.services.users.users_repository.save_user"), \
-             patch("app.services.users._notify_product_service_block"):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=user
+        ), patch("app.services.users.users_repository.save_user"), patch(
+            "app.services.users._notify_product_service_block"
+        ):
             result = block_user(db, user_id=1, admin_user=admin)
         assert "blocked successfully" in result["message"].lower()
         assert user.blocked is True
@@ -165,9 +192,12 @@ class TestBlockUser:
         admin = _make_user(id=99, role="admin")
         user = _make_user(id=1, blocked=False)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=user), \
-             patch("app.services.users.users_repository.save_user"), \
-             patch("app.services.users._notify_product_service_block", side_effect=Exception("connection error")):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=user
+        ), patch("app.services.users.users_repository.save_user"), patch(
+            "app.services.users._notify_product_service_block",
+            side_effect=Exception("connection error"),
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 block_user(db, user_id=1, admin_user=admin)
         assert exc_info.value.status_code == 502
@@ -178,8 +208,12 @@ class TestBlockUser:
         admin = _make_user(id=99, role="admin")
         user = _make_user(id=1, blocked=False)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=user), \
-             patch("app.services.users.users_repository.save_user", side_effect=Exception("DB error")):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=user
+        ), patch(
+            "app.services.users.users_repository.save_user",
+            side_effect=Exception("DB error"),
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 block_user(db, user_id=1, admin_user=admin)
         assert exc_info.value.status_code == 500
@@ -192,7 +226,9 @@ class TestUnblockUser:
     def test_raises_404_when_user_not_found(self):
         admin = _make_user(id=99, role="admin")
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=None):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=None
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 unblock_user(db, user_id=1, admin_user=admin)
         assert exc_info.value.status_code == 404
@@ -201,7 +237,9 @@ class TestUnblockUser:
         admin = _make_user(id=99, role="admin")
         user = _make_user(id=1, blocked=False)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=user):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=user
+        ):
             result = unblock_user(db, user_id=1, admin_user=admin)
         assert "not blocked" in result["message"].lower()
 
@@ -209,9 +247,11 @@ class TestUnblockUser:
         admin = _make_user(id=99, role="admin")
         user = _make_user(id=1, blocked=True)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=user), \
-             patch("app.services.users.users_repository.save_user"), \
-             patch("app.services.users._notify_product_service_unblock"):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=user
+        ), patch("app.services.users.users_repository.save_user"), patch(
+            "app.services.users._notify_product_service_unblock"
+        ):
             result = unblock_user(db, user_id=1, admin_user=admin)
         assert "unblocked successfully" in result["message"].lower()
         assert user.blocked is False
@@ -220,9 +260,12 @@ class TestUnblockUser:
         admin = _make_user(id=99, role="admin")
         user = _make_user(id=1, blocked=True)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=user), \
-             patch("app.services.users.users_repository.save_user"), \
-             patch("app.services.users._notify_product_service_unblock", side_effect=Exception("error")):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=user
+        ), patch("app.services.users.users_repository.save_user"), patch(
+            "app.services.users._notify_product_service_unblock",
+            side_effect=Exception("error"),
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 unblock_user(db, user_id=1, admin_user=admin)
         assert exc_info.value.status_code == 502
@@ -232,8 +275,12 @@ class TestUnblockUser:
         admin = _make_user(id=99, role="admin")
         user = _make_user(id=1, blocked=True)
         db = MagicMock()
-        with patch("app.services.users.users_repository.get_user_by_id", return_value=user), \
-             patch("app.services.users.users_repository.save_user", side_effect=Exception("DB error")):
+        with patch(
+            "app.services.users.users_repository.get_user_by_id", return_value=user
+        ), patch(
+            "app.services.users.users_repository.save_user",
+            side_effect=Exception("DB error"),
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 unblock_user(db, user_id=1, admin_user=admin)
         assert exc_info.value.status_code == 500
@@ -247,7 +294,9 @@ class TestListUsersAdmin:
         user1 = _make_user(id=1, first_name="Alice", last_name="Smith", blocked=False)
         user2 = _make_user(id=2, first_name="Bob", last_name="Jones", blocked=True)
         db = MagicMock()
-        with patch("app.services.users.get_users_paginated", return_value=([user1, user2], 2)):
+        with patch(
+            "app.services.users.get_users_paginated", return_value=([user1, user2], 2)
+        ):
             result = list_users_admin(db, page=1, limit=10)
         assert result["total"] == 2
         assert result["page"] == 1
@@ -255,7 +304,9 @@ class TestListUsersAdmin:
         assert len(result["data"]) == 2
 
     def test_blocked_user_has_status_bloqueado(self):
-        user = _make_user(id=1, first_name="", last_name="", username="blocky", blocked=True)
+        user = _make_user(
+            id=1, first_name="", last_name="", username="blocky", blocked=True
+        )
         db = MagicMock()
         with patch("app.services.users.get_users_paginated", return_value=([user], 1)):
             result = list_users_admin(db, page=1, limit=10)
@@ -269,7 +320,9 @@ class TestListUsersAdmin:
         assert result["data"][0]["status"] == "active"
 
     def test_empty_name_fallback_to_username(self):
-        user = _make_user(id=1, first_name=None, last_name=None, username="johndoe", blocked=False)
+        user = _make_user(
+            id=1, first_name=None, last_name=None, username="johndoe", blocked=False
+        )
         user.first_name = None
         user.last_name = None
         db = MagicMock()
@@ -284,10 +337,12 @@ class TestListUsersAdmin:
 class TestGetUserMetrics:
     def test_returns_metrics(self):
         from datetime import date
+
         db = MagicMock()
         timeline_data = [(date(2024, 1, 1), 5), (date(2024, 1, 2), 3)]
-        with patch("app.services.users.count_total_users", return_value=100), \
-             patch("app.services.users.get_users_timeline", return_value=timeline_data):
+        with patch("app.services.users.count_total_users", return_value=100), patch(
+            "app.services.users.get_users_timeline", return_value=timeline_data
+        ):
             result = get_user_metrics(db, date(2024, 1, 1), date(2024, 1, 31))
 
         assert result["totalUsers"] == 100
@@ -296,8 +351,11 @@ class TestGetUserMetrics:
 
     def test_raises_500_on_exception(self):
         from datetime import date
+
         db = MagicMock()
-        with patch("app.services.users.count_total_users", side_effect=Exception("DB error")):
+        with patch(
+            "app.services.users.count_total_users", side_effect=Exception("DB error")
+        ):
             with pytest.raises(ServiceException) as exc_info:
                 get_user_metrics(db, date(2024, 1, 1), date(2024, 1, 31))
         assert exc_info.value.status_code == 500

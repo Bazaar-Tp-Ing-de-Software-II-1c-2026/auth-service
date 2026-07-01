@@ -40,15 +40,16 @@ def update_my_profile(
 
 @router.get("", response_model=schemas.PaginatedAdminUsersResponse)
 def list_users_admin(
-	db: Session = Depends(get_db),
-	admin_user: models.User = Depends(require_admin),
-	page: int = Query(1, ge=1),
-	limit: int = Query(10, ge=1, le=100),
-	search: str | None = Query(None),
+    db: Session = Depends(get_db),
+    admin_user: models.User = Depends(require_admin),
+    page: int = Query(1, ge=1),
+    limit: int = Query(10, ge=1, le=100),
+    search: str | None = Query(None),
     start_date: date | None = Query(None),
     end_date: date | None = Query(None),
 ):
-	return users_service.list_users_admin(db, page, limit, search, start_date, end_date)
+    return users_service.list_users_admin(db, page, limit, search, start_date, end_date)
+
 
 @router.get("/metrics")
 def get_user_metrics(
@@ -59,6 +60,7 @@ def get_user_metrics(
 ):
     return users_service.get_user_metrics(db, start_date, end_date)
 
+
 @router.put("/{id}/promote-to-admin")
 def promote_to_admin(
     id: int,
@@ -67,12 +69,14 @@ def promote_to_admin(
 ):
     return users_service.promote_to_admin(db, id, admin_user)
 
+
 @router.post("/me/upload-url")
 def generate_upload_url(
     content_type: str,
     current_user: models.User = Depends(get_current_user),
 ):
-	return users_service.generate_upload_url(content_type, current_user)
+    return users_service.generate_upload_url(content_type, current_user)
+
 
 @router.get("/{id}", response_model=schemas.UserPublicOut)
 def get_user_public_profile_by_id(id: int, db: Session = Depends(get_db)):

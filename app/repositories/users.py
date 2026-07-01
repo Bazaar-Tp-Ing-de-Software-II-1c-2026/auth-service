@@ -26,8 +26,14 @@ def count_total_users(db: Session):
 
 def get_users_timeline(db: Session, start_date: date, end_date: date):
     return (
-        db.query(cast(models.User.created_at, Date).label("date"), func.count(models.User.id).label("count"))
-        .filter(cast(models.User.created_at, Date) >= start_date, cast(models.User.created_at, Date) <= end_date)
+        db.query(
+            cast(models.User.created_at, Date).label("date"),
+            func.count(models.User.id).label("count"),
+        )
+        .filter(
+            cast(models.User.created_at, Date) >= start_date,
+            cast(models.User.created_at, Date) <= end_date,
+        )
         .group_by(cast(models.User.created_at, Date))
         .order_by(cast(models.User.created_at, Date))
         .all()
@@ -56,14 +62,10 @@ def get_users_paginated(
         )
 
     if start_date:
-        query = query.filter(
-            cast(models.User.created_at, Date) >= start_date
-        )
+        query = query.filter(cast(models.User.created_at, Date) >= start_date)
 
     if end_date:
-        query = query.filter(
-            cast(models.User.created_at, Date) <= end_date
-        )
+        query = query.filter(cast(models.User.created_at, Date) <= end_date)
 
     total = query.count()
     users = (
